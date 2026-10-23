@@ -37,6 +37,7 @@ fi
 
 # 3. Frisches App-Bundle und DMG erstellen
 echo "==> [1/4] Erstelle App-Bundle und Disk-Image (DMG)..."
+./bundle_app.sh
 ./create_dmg.sh
 
 if [ ! -f "$DMG_FILE" ]; then

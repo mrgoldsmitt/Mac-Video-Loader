@@ -1,4 +1,4 @@
-# Mac Video Loader (MVL) für macOS – v0.5.1
+# Mac Video Loader (MVL) für macOS – v0.5.2
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue.svg)](https://www.apple.com/macos/)
@@ -8,6 +8,13 @@ Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum
 ---
 
 ## Highlights & Features
+
+- **Open-Source-Release, GitHub Pipeline & CC BY-NC 4.0 (Neu in v0.5.2):**
+  - **Öffentliches GitHub-Repository**: Vollständig quelloffen unter `github.com/mrgoldsmitt/Mac-Video-Loader` mit Release-Artefakten.
+  - **Creative Commons Lizenz (CC BY-NC 4.0)**: Freie Weitergabe und Anpassung unter Namensnennung von Autor `mrgoldsmitt` für nicht-kommerzielle Zwecke.
+  - **In-App Lizenzanzeige**: Lizenz- und Urheberrechtsansicht direkt im Einstellungen-Dialog (Reiter Allgemein).
+  - **Automatisierte Deployment-Pipeline**: 1-Klick-Release über `./deploy_release.sh` zum Erstellen von App & DMG, Git-Tagging und Upload in GitHub Releases.
+  - **Datenschutz & Anonymisierung**: Sämtliche persönlichen Entwickler-Pfade und Identifier wurden restlos neutralisiert.
 
 - **Beschleunigte Container-Optimierung & Watchdog (Neu in v0.5.1):**
   - **Direkte MP4-Streams bevorzugt**: Bei öffentlich-rechtlichen Mediatheken (ZDF, ARD) werden native, progressive MP4-Streams (`http...`) priorisiert, wodurch zeitaufwändige HLS-MPEG-TS-Container-Fixups entfallen.
@@ -163,11 +170,11 @@ Das Deployment kann wahlweise lokal über das bereitgestellte Skript oder automa
 
 * **Lokaler 1-Klick-Deploy:**
   ```bash
-  # Baut das App-Bundle & DMG, setzt den Git-Tag (z.B. v0.5.1) und lädt das Release auf GitHub hoch
+  # Baut das App-Bundle & DMG, setzt den Git-Tag (z.B. v0.5.2) und lädt das Release auf GitHub hoch
   ./deploy_release.sh
   ```
 * **Automatisierte CI/CD-Pipeline (GitHub Actions):**
-  Sobald ein Versions-Tag (z. B. `v0.5.1`) gepusht wird, baut GitHub Actions das DMG automatisch auf einem macOS-Runner und veröffentlicht es als GitHub Release.
+  Sobald ein Versions-Tag (z. B. `v0.5.2`) gepusht wird, baut GitHub Actions das DMG automatisch auf einem macOS-Runner und veröffentlicht es als GitHub Release.
 
 ---
 

@@ -71,7 +71,7 @@ public struct SettingsSheet: View {
 
             // Footer
             HStack {
-                Text("Mac Video Loader v0.5.1 (MVL)")
+                Text("Mac Video Loader v0.5.2 (MVL)")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.6))
                 Spacer()
@@ -466,7 +466,7 @@ public struct SettingsSheet: View {
                         Text("Mac Video Loader")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.white)
-                        Text("v0.5.1 (MVL)")
+                        Text("v0.5.2 (MVL)")
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -493,12 +493,25 @@ public struct SettingsSheet: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
                     Spacer()
-                    Text("22. Oktober 2026")
+                    Text("23. Oktober 2026")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
+                    changelogSection(
+                        icon: "globe.americas.fill",
+                        color: .purple,
+                        title: "Version 0.5.2 - Open Source Release, GitHub Deployment & CC BY-NC 4.0",
+                        items: [
+                            "Offizielles Open-Source-Release auf GitHub unter github.com/mrgoldsmitt/Mac-Video-Loader.",
+                            "Creative Commons Namensnennung - Nicht-kommerziell 4.0 Lizenzierung (CC BY-NC 4.0): Freie Weitergabe unter Nennung von Autor 'mrgoldsmitt', keine kommerzielle Nutzung.",
+                            "Lizenz- und Urheberrechtsansicht direkt im Einstellungen-Fenster (Reiter Allgemein) integriert.",
+                            "Automatisierte Deployment-Pipeline (deploy_release.sh) zum Bauen, Signieren, Taggen und Release-Upload via GitHub CLI.",
+                            "Vollständige Anonymisierung & Datenschutzbereinigung des gesamten Codebases."
+                        ]
+                    )
+
                     changelogSection(
                         icon: "bolt.badge.clock.fill",
                         color: .green,

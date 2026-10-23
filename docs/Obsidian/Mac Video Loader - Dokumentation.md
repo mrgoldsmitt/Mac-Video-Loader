@@ -17,14 +17,14 @@ status: "active"
 # Mac Video Loader (MVL) – Entwickler- & Anwender-Dokumentation
 
 > [!INFO] Überblick
-> **Mac Video Loader (MVL)** ist eine native macOS-Anwendung in Swift und SwiftUI für macOS 13+ (Ventura, Sonoma, Sequoia). Sie vereint den Ausfall-gesicherten Download von Videos und Tonspuren aus öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, etc.), YouTube und beliebigen Webseiten mit einem intelligenten **Rename Studio** und nativer **Google Gemini KI-Unterstützung**.
+> **Mac Video Loader (MVL)** ist eine native macOS-Anwendung in Swift und SwiftUI für macOS 13+ (Ventura, Sonoma, Sequoia). Sie vereint den Ausfall-gesicherten Download von Videos und Tonspuren aus öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, etc.), YouTube und beliebigen Webseiten mit einem intelligenten **Rename Studio** und nativer **Multi-KI-Unterstützung (ChatGPT, Claude & Gemini)**.
 
 ---
 
 ## Inhaltsverzeichnis
 - [[#1. Architektur & Kernmodule]]
 - [[#2. Rename Studio]]
-- [[#3. Google Gemini KI-Integration]]
+- [[#3. Multi-KI-Integration (ChatGPT, Claude, Gemini)]]
 - [[#4. Downloads & Mediatheken]]
 - [[#5. Datenschutz & Sicherheit]]
 - [[#6. Build-, Installations- & Release-Pipeline]]
@@ -42,9 +42,11 @@ graph TD
     DM --> NMS[NetworkMonitorService]
     DM --> SPS[SleepPreventionService]
     RS --> RNS[RenameService]
-    RS --> GS[GeminiService]
-    GS --> KS[KeychainService]
-    GS --> GAPI[Google Gemini REST API]
+    RS --> AIS[AIService]
+    AIS --> KS[KeychainService]
+    AIS --> OAI[OpenAI ChatGPT API]
+    AIS --> ANT[Anthropic Claude API]
+    AIS --> GAPI[Google Gemini API]
     RNS --> CLI[Lokale CLI / Fallback Heuristik]
 ```
 
@@ -54,8 +56,8 @@ graph TD
 | :--- | :--- | :--- |
 | `DownloadManager` | `Services/DownloadManager.swift` | Zentrale Steuerung der Warteschlange, Multi-Threading, Persistenz & Playlist-Inspektion. |
 | `RenameService` | `Services/RenameService.swift` | Anbindung optionaler CLI, rekursive Ordnerscans & lokale Heuristik für Serien/Dateien. |
-| `GeminiService` | `Services/GeminiService.swift` | REST-Client für Google Gemini 2.5 Flash / Pro mit strukturiertem JSON-Output. |
-| `KeychainService` | `Services/KeychainService.swift` | Sichere Speicherung sensibler Tokens im macOS-Schlüsselbund. |
+| `AIService` | `Services/AIService.swift` | Einheitlicher REST-Client für OpenAI (ChatGPT), Anthropic (Claude) & Google (Gemini). |
+| `KeychainService` | `Services/KeychainService.swift` | Getrennte, sichere Speicherung sensibler Tokens aller Anbieter im macOS-Schlüsselbund. |
 | `YTDlpService` | `Services/YTDlpService.swift` | Subprozess-Wrapper für `yt-dlp` und `ffmpeg` mit Watchdog-Schutz. |
 | `RenameStudioSheet` | `Views/RenameStudioSheet.swift` | Dual-Pane Vorschauoberfläche mit Fortschrittsbalken, Echtzeit-Filtern, Tokens und KI-Prompt. |
 
@@ -92,14 +94,18 @@ Das **Rename Studio** kann wahlweise direkt im Anschluss an einen Download oder 
 
 ---
 
-## 3. Google Gemini KI-Integration
+## 3. Multi-KI-Integration (ChatGPT, Claude & Gemini)
 
-> [!NOTE] Modell-Wahl & Geschwindigkeit
-> Standardmäßig ist **Gemini 2.5 Flash** aktiviert. Es liefert Metadaten-Vorschläge in unter einer Sekunde bei minimalem Token-Verbrauch. Für anspruchsvolle Titel kann jederzeit auf **Gemini 2.5 Pro** gewechselt werden.
+> [!NOTE] Freie Anbieter- und Modellauswahl
+> Nutzer können flexibel ihren bevorzugten Anbieter wählen:
+> - **OpenAI**: `gpt-4o-mini` (Standard), `gpt-4o`, `o3-mini`, `gpt-4-turbo`
+> - **Anthropic**: `claude-3-5-haiku` (Standard), `claude-3-5-sonnet`, `claude-3-opus`
+> - **Google**: `gemini-2.5-flash` (Standard), `gemini-2.5-pro`, `gemini-2.0-flash`
+> Die jeweiligen API-Keys werden separat und sicher im macOS-Schlüsselbund hinterlegt.
 
 ### Funktionsweise
 1. **Plex-Optimierung**:
-   - Gemini gleicht Folgentitel mit globalem Serienwissen (TMDb / TheTVDB) ab.
+   - Die ausgewählte KI gleicht Folgentitel mit globalem Serienwissen (TMDb / TheTVDB) ab.
    - **Echte Episodennummern**: Folgen werden nach ihrem tatsächlichen Inhalt nummeriert – ein Titel mit „A“ wird nicht blind zu Folge 1 gemacht.
    - Jede Folge in einer Staffel erhält eine individuelle, aufsteigende Nummer (`s01e01`, `s01e02`...).
 2. **Prompt-Eingabefeld (`aiPromptText`)**:

@@ -8,8 +8,14 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 ## [0.7.0] - 2026-10-23
 
 ### Hinzugefügt
+- **Multi-KI-Anbindung (ChatGPT, Claude & Gemini)**:
+  - Freie Wahl des KI-Anbieters für intelligente Umbenennungen: **ChatGPT (OpenAI)**, **Claude (Anthropic)** oder **Google Gemini**.
+  - Getrennte, sichere Speicherung der API-Keys im macOS-Schlüsselbund (`KeychainService`) für jeden Anbieter.
+  - Dynamische Modellauswahl je nach Anbieter (z. B. `gpt-4o-mini`, `gpt-4o`, `o3-mini`, `claude-3-5-haiku`, `claude-3-5-sonnet`, `gemini-2.5-flash`, `gemini-2.5-pro`).
+  - Live-Verbindungstest für alle drei Anbieter direkt im Einstellungen-Dialog.
+  - Direkte Anbieter- und Modellwahl im Rename Studio inklusive integriertem Schlüssel-Banner falls noch nicht konfiguriert.
 - **Rename Studio (Medien- & Serien-Umbenennung)**:
-  - Vollständige Integration von Rename Studio mit smarter lokaler Heuristik, optionaler CLI-Anbindung und Google Gemini KI zum Umbenennen und Organisieren von Medien- und Seriendateien.
+  - Vollständige Integration von Rename Studio mit smarter lokaler Heuristik, optionaler CLI-Anbindung und KI-Unterstützung (ChatGPT, Claude, Gemini) zum Umbenennen und Organisieren von Medien- und Seriendateien.
   - Visuelle Fortschrittsbalken für Analyse/Abgleich und Umbenennungsausführung in Echtzeit (inkl. Prozentanzeige und aktueller Datei).
   - Automatischer Post-Download-Banner: Fragt den Nutzer nach Abschluss eines Downloads, ob die Dateien direkt in Serien- oder Staffelstruktur umbenannt werden sollen.
   - Standalone-Modus für bestehende Mac-Ordner: Beliebige lokale Ordner können über die Top-Navigation (`Dateien umbenennen...`) oder per Drag & Drop rekursiv eingelesen und verarbeitet werden.

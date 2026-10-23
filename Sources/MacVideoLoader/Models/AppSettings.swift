@@ -18,6 +18,9 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
         static let filebotLanguage = "filebotLanguage"
         static let filebotDatabase = "filebotDatabase"
         static let geminiModel = "geminiModel"
+        static let selectedAIProvider = "selectedAIProvider"
+        static let chatgptModel = "chatgptModel"
+        static let claudeModel = "claudeModel"
         static let geminiPlexSeasonFolder = "geminiPlexSeasonFolder"
         static let geminiIncludeYear = "geminiIncludeYear"
     }
@@ -112,6 +115,24 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
         set { filebotDatabase = newValue }
     }
 
+    @Published public var selectedAIProvider: AIProvider {
+        didSet {
+            UserDefaults.standard.set(selectedAIProvider.rawValue, forKey: Keys.selectedAIProvider)
+        }
+    }
+
+    @Published public var chatgptModel: String {
+        didSet {
+            UserDefaults.standard.set(chatgptModel, forKey: Keys.chatgptModel)
+        }
+    }
+
+    @Published public var claudeModel: String {
+        didSet {
+            UserDefaults.standard.set(claudeModel, forKey: Keys.claudeModel)
+        }
+    }
+
     @Published public var geminiModel: String {
         didSet {
             UserDefaults.standard.set(geminiModel, forKey: Keys.geminiModel)
@@ -131,24 +152,83 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
     }
 
     @Published public var hasGeminiApiKey: Bool = false
+    @Published public var hasChatGPTApiKey: Bool = false
+    @Published public var hasClaudeApiKey: Bool = false
 
-    public func getGeminiApiKey() -> String {
-        return KeychainService.shared.load(forAccount: "gemini_api_key") ?? ""
+    public func getApiKey(for provider: AIProvider) -> String {
+        return KeychainService.shared.load(forAccount: provider.keychainAccount) ?? ""
     }
 
-    public func setGeminiApiKey(_ key: String) {
+    public func setApiKey(_ key: String, for provider: AIProvider) {
         let clean = key.trimmingCharacters(in: .whitespacesAndNewlines)
         if clean.isEmpty {
-            deleteGeminiApiKey()
+            deleteApiKey(for: provider)
         } else {
-            _ = KeychainService.shared.save(key: clean, forAccount: "gemini_api_key")
-            hasGeminiApiKey = true
+            _ = KeychainService.shared.save(key: clean, forAccount: provider.keychainAccount)
+            updateApiKeyStatus(for: provider, hasKey: true)
         }
     }
 
+    public func deleteApiKey(for provider: AIProvider) {
+        _ = KeychainService.shared.delete(forAccount: provider.keychainAccount)
+        updateApiKeyStatus(for: provider, hasKey: false)
+    }
+
+    public func hasApiKey(for provider: AIProvider) -> Bool {
+        return !getApiKey(for: provider).isEmpty
+    }
+
+    private func updateApiKeyStatus(for provider: AIProvider, hasKey: Bool) {
+        switch provider {
+        case .gemini:
+            hasGeminiApiKey = hasKey
+        case .chatgpt:
+            hasChatGPTApiKey = hasKey
+        case .claude:
+            hasClaudeApiKey = hasKey
+        }
+    }
+
+    public func getModel(for provider: AIProvider) -> String {
+        switch provider {
+        case .gemini: return geminiModel
+        case .chatgpt: return chatgptModel
+        case .claude: return claudeModel
+        }
+    }
+
+    public func setModel(_ model: String, for provider: AIProvider) {
+        switch provider {
+        case .gemini: geminiModel = model
+        case .chatgpt: chatgptModel = model
+        case .claude: claudeModel = model
+        }
+    }
+
+    public var currentAIModel: String {
+        get { getModel(for: selectedAIProvider) }
+        set { setModel(newValue, for: selectedAIProvider) }
+    }
+
+    public var currentAIApiKey: String {
+        getApiKey(for: selectedAIProvider)
+    }
+
+    public var hasCurrentAIApiKey: Bool {
+        hasApiKey(for: selectedAIProvider)
+    }
+
+    // Backward compatibility aliases
+    public func getGeminiApiKey() -> String {
+        return getApiKey(for: .gemini)
+    }
+
+    public func setGeminiApiKey(_ key: String) {
+        setApiKey(key, for: .gemini)
+    }
+
     public func deleteGeminiApiKey() {
-        _ = KeychainService.shared.delete(forAccount: "gemini_api_key")
-        hasGeminiApiKey = false
+        deleteApiKey(for: .gemini)
     }
 
     public init() {
@@ -190,14 +270,25 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
         self.filebotLanguage = UserDefaults.standard.string(forKey: Keys.filebotLanguage) ?? "German"
         self.filebotDatabase = UserDefaults.standard.string(forKey: Keys.filebotDatabase) ?? "TheMovieDB::TV"
 
-        self.geminiModel = UserDefaults.standard.string(forKey: Keys.geminiModel) ?? "gemini-2.5-flash"
+        if let rawProvider = UserDefaults.standard.string(forKey: Keys.selectedAIProvider),
+           let provider = AIProvider(rawValue: rawProvider) {
+            self.selectedAIProvider = provider
+        } else {
+            self.selectedAIProvider = .gemini
+        }
+
+        self.chatgptModel = UserDefaults.standard.string(forKey: Keys.chatgptModel) ?? AIProvider.chatgpt.defaultModel
+        self.claudeModel = UserDefaults.standard.string(forKey: Keys.claudeModel) ?? AIProvider.claude.defaultModel
+        self.geminiModel = UserDefaults.standard.string(forKey: Keys.geminiModel) ?? AIProvider.gemini.defaultModel
         self.geminiPlexSeasonFolder = UserDefaults.standard.string(forKey: Keys.geminiPlexSeasonFolder) ?? "Season"
         if UserDefaults.standard.object(forKey: Keys.geminiIncludeYear) == nil {
             self.geminiIncludeYear = true
         } else {
             self.geminiIncludeYear = UserDefaults.standard.bool(forKey: Keys.geminiIncludeYear)
         }
-        self.hasGeminiApiKey = !(KeychainService.shared.load(forAccount: "gemini_api_key") ?? "").isEmpty
+        self.hasGeminiApiKey = !(KeychainService.shared.load(forAccount: AIProvider.gemini.keychainAccount) ?? "").isEmpty
+        self.hasChatGPTApiKey = !(KeychainService.shared.load(forAccount: AIProvider.chatgpt.keychainAccount) ?? "").isEmpty
+        self.hasClaudeApiKey = !(KeychainService.shared.load(forAccount: AIProvider.claude.keychainAccount) ?? "").isEmpty
 
         // Ensure default download folder exists
         try? FileManager.default.createDirectory(at: self.downloadFolder, withIntermediateDirectories: true)

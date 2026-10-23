@@ -69,7 +69,7 @@ public enum RenameDatabase: String, CaseIterable, Identifiable, Codable {
         case .themoviedb: return "TheMovieDB (TMDb - Empfohlen)"
         case .thetvdb: return "TheTVDB (Serien-Archiv)"
         case .anidb: return "AniDB (Anime-Archiv)"
-        case .gemini: return "✨ Google Gemini KI (Plex-Optimiert)"
+        case .gemini: return "✨ KI-Abgleich (Plex-Optimiert)"
         }
     }
 }

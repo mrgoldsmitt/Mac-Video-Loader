@@ -15,7 +15,7 @@ public struct RenameStudioSheet: View {
     @State private var isRenaming: Bool = false
     @State private var statusText: String = "Bereit. Passe die Einstellungen oder den KI-Prompt an und klicke auf 'Abgleichen'."
     @State private var renameCompletedCount: Int? = nil
-    @State private var tempGeminiApiKey: String = ""
+    @State private var tempApiKey: String = ""
     @State private var showApiKeySection: Bool = false
 
     // Progress bar states for analysis and renaming
@@ -31,7 +31,7 @@ public struct RenameStudioSheet: View {
     @State private var currentFolder: URL
     @State private var categoryFilter: FileCategoryFilter = .all
     @State private var searchQuery: String = ""
-    @State private var useCustomGeminiAI: Bool = false
+    @State private var useCustomAI: Bool = false
     @State private var isDropTargeted: Bool = false
 
     private let sourceItems: [DownloadItem]?
@@ -50,8 +50,8 @@ public struct RenameStudioSheet: View {
         _currentFolder = State(initialValue: initialFolder)
     }
 
-    private var isGeminiActive: Bool {
-        return (mode == .custom && useCustomGeminiAI) || (mode != .custom && database == .gemini)
+    private var isAIActive: Bool {
+        return (mode == .custom && useCustomAI) || (mode != .custom && database == .gemini)
     }
 
     public var filteredItems: [RenameItem] {
@@ -76,8 +76,8 @@ public struct RenameStudioSheet: View {
             // Configuration Controls
             configurationStrip
 
-            if isGeminiActive && (!settings.hasGeminiApiKey || showApiKeySection) {
-                geminiApiKeyBanner
+            if isAIActive && (!settings.hasApiKey(for: settings.selectedAIProvider) || showApiKeySection) {
+                aiApiKeyBanner
             }
 
             // Category & Search Filter Strip
@@ -160,7 +160,7 @@ public struct RenameStudioSheet: View {
                     }
                 }
 
-                Text("Serien, Filme & beliebige Dateien rekursiv nach Schema oder Google Gemini KI umbenennen")
+                Text("Serien, Filme & beliebige Dateien rekursiv nach Schema oder KI (ChatGPT / Claude / Gemini) umbenennen")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
@@ -233,45 +233,68 @@ public struct RenameStudioSheet: View {
                     .onChange(of: mode) { newMode in
                         formatExpression = newMode.defaultFormat
                         if newMode == .custom && database == .gemini {
-                            useCustomGeminiAI = true
+                            useCustomAI = true
                         }
                     }
                 }
 
                 if mode == .custom {
-                    // Method for custom files: Markup Tokens vs Gemini AI
+                    // Method for custom files: Markup Tokens vs AI
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Methode")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.secondary)
 
-                        Picker("", selection: $useCustomGeminiAI) {
+                        Picker("", selection: $useCustomAI) {
                             Text("Markup & Tokens").tag(false)
-                            Text("✨ Google Gemini KI").tag(true)
+                            Text("✨ KI-Unterstützung").tag(true)
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 250)
-                        .onChange(of: useCustomGeminiAI) { isAI in
-                            if isAI && !settings.hasGeminiApiKey {
+                        .onChange(of: useCustomAI) { isAI in
+                            if isAI && !settings.hasApiKey(for: settings.selectedAIProvider) {
                                 showApiKeySection = true
                             }
                         }
                     }
 
-                    if useCustomGeminiAI {
-                        // Gemini Model Picker
+                    if useCustomAI {
+                        // AI Provider Picker
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Gemini KI-Modell")
+                            Text("KI-Anbieter")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.purple)
 
-                            Picker("", selection: $settings.geminiModel) {
-                                ForEach(GeminiModelOption.availableModels) { opt in
-                                    Text(opt.displayName).tag(opt.id)
+                            Picker("", selection: $settings.selectedAIProvider) {
+                                ForEach(AIProvider.allCases) { p in
+                                    Text(p.displayName).tag(p)
                                 }
                             }
                             .pickerStyle(.menu)
                             .frame(width: 170)
+                            .onChange(of: settings.selectedAIProvider) { p in
+                                if !settings.hasApiKey(for: p) {
+                                    showApiKeySection = true
+                                }
+                            }
+                        }
+
+                        // AI Model Picker
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Modell")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.purple)
+
+                            Picker("", selection: Binding(
+                                get: { settings.getModel(for: settings.selectedAIProvider) },
+                                set: { settings.setModel($0, for: settings.selectedAIProvider) }
+                            )) {
+                                ForEach(AIModelOption.models(for: settings.selectedAIProvider)) { opt in
+                                    Text(opt.displayName).tag(opt.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 160)
                         }
                     }
                 } else {
@@ -325,25 +348,49 @@ public struct RenameStudioSheet: View {
                         .pickerStyle(.menu)
                         .frame(width: 190)
                         .onChange(of: database) { newDb in
-                            if newDb == .gemini && !settings.hasGeminiApiKey {
+                            if newDb == .gemini && !settings.hasApiKey(for: settings.selectedAIProvider) {
                                 showApiKeySection = true
                             }
                         }
                     }
 
                     if database == .gemini {
+                        // AI Provider Picker
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Gemini KI-Modell")
+                            Text("KI-Anbieter")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.purple)
 
-                            Picker("", selection: $settings.geminiModel) {
-                                ForEach(GeminiModelOption.availableModels) { opt in
+                            Picker("", selection: $settings.selectedAIProvider) {
+                                ForEach(AIProvider.allCases) { p in
+                                    Text(p.displayName).tag(p)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 165)
+                            .onChange(of: settings.selectedAIProvider) { p in
+                                if !settings.hasApiKey(for: p) {
+                                    showApiKeySection = true
+                                }
+                            }
+                        }
+
+                        // AI Model Picker
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Modell")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.purple)
+
+                            Picker("", selection: Binding(
+                                get: { settings.getModel(for: settings.selectedAIProvider) },
+                                set: { settings.setModel($0, for: settings.selectedAIProvider) }
+                            )) {
+                                ForEach(AIModelOption.models(for: settings.selectedAIProvider)) { opt in
                                     Text(opt.displayName).tag(opt.id)
                                 }
                             }
                             .pickerStyle(.menu)
-                            .frame(width: 160)
+                            .frame(width: 155)
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 3) {
@@ -365,8 +412,8 @@ public struct RenameStudioSheet: View {
                 Spacer()
             }
 
-            // Row 2: AI Prompt Input (Visible whenever Gemini is active!)
-            if isGeminiActive {
+            // Row 2: AI Prompt Input (Visible whenever AI is active!)
+            if isAIActive {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .foregroundColor(.purple)
@@ -499,7 +546,7 @@ public struct RenameStudioSheet: View {
                 if mode != .custom && database != .gemini {
                     Button(action: {
                         database = .gemini
-                        if !settings.hasGeminiApiKey {
+                        if !settings.hasApiKey(for: settings.selectedAIProvider) {
                             showApiKeySection = true
                         }
                     }) {
@@ -521,19 +568,19 @@ public struct RenameStudioSheet: View {
                                 .scaleEffect(0.6)
                                 .frame(width: 14, height: 14)
                         } else {
-                            Image(systemName: isGeminiActive ? "sparkles" : "arrow.clockwise")
+                            Image(systemName: isAIActive ? "sparkles" : "arrow.clockwise")
                         }
-                        Text(isGeminiActive ? "Mit KI abgleichen" : "Abgleichen")
+                        Text(isAIActive ? "Mit KI abgleichen" : "Abgleichen")
                     }
                     .font(.system(size: 12, weight: .bold))
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(isGeminiActive ? .purple : .blue)
+                .tint(isAIActive ? .purple : .blue)
                 .disabled(isMatching)
             }
 
             // Row 3b: Token Chips for Custom Mode (Markup)
-            if mode == .custom && !useCustomGeminiAI {
+            if mode == .custom && !useCustomAI {
                 HStack(spacing: 6) {
                     Text("Markup-Tokens:")
                         .font(.system(size: 10, weight: .bold))
@@ -582,7 +629,7 @@ public struct RenameStudioSheet: View {
     private var analysisProgressBar: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                if isGeminiActive {
+                if isAIActive {
                     Image(systemName: "sparkles")
                         .foregroundColor(.purple)
                         .font(.system(size: 11, weight: .bold))
@@ -594,24 +641,24 @@ public struct RenameStudioSheet: View {
 
                 Text(matchingStatus.isEmpty ? "Analysiere Dateinamen..." : matchingStatus)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(isGeminiActive ? .purple : .blue)
+                    .foregroundColor(isAIActive ? .purple : .blue)
                     .lineLimit(1)
 
                 Spacer()
 
                 Text("\(Int(matchingProgress * 100))%")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(isGeminiActive ? .purple : .blue)
+                    .foregroundColor(isAIActive ? .purple : .blue)
             }
 
             ProgressView(value: matchingProgress, total: 1.0)
                 .progressViewStyle(.linear)
-                .tint(isGeminiActive ? .purple : .blue)
+                .tint(isAIActive ? .purple : .blue)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(isGeminiActive ? Color.purple.opacity(0.12) : Color.blue.opacity(0.10))
-        .overlay(Rectangle().frame(height: 1).foregroundColor(isGeminiActive ? Color.purple.opacity(0.3) : Color.blue.opacity(0.3)), alignment: .bottom)
+        .background(isAIActive ? Color.purple.opacity(0.12) : Color.blue.opacity(0.10))
+        .overlay(Rectangle().frame(height: 1).foregroundColor(isAIActive ? Color.purple.opacity(0.3) : Color.blue.opacity(0.3)), alignment: .bottom)
         .transition(.opacity)
     }
 
@@ -753,9 +800,10 @@ public struct RenameStudioSheet: View {
         .background(Color(red: 0.11, green: 0.11, blue: 0.13))
     }
 
-    // MARK: - Gemini API Key Inline Banner
-    private var geminiApiKeyBanner: some View {
-        HStack(spacing: 12) {
+    // MARK: - AI API Key Inline Banner
+    private var aiApiKeyBanner: some View {
+        let currentProvider = settings.selectedAIProvider
+        return HStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(Color.purple.opacity(0.2))
@@ -766,33 +814,44 @@ public struct RenameStudioSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Google Gemini API-Key eingeben")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
-                Text("Wird sicher im macOS-Schlüsselbund gespeichert. Kostenlos bei aistudio.google.com erhältlich.")
+                HStack(spacing: 6) {
+                    Text("\(currentProvider.displayName) API-Key eingeben")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Picker("", selection: $settings.selectedAIProvider) {
+                        ForEach(AIProvider.allCases) { p in
+                            Text(p.shortName).tag(p)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 90)
+                }
+
+                Text("Wird sicher im macOS-Schlüsselbund gespeichert. Bei \(currentProvider.portalDisplayName) erhältlich.")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
 
             Spacer()
 
-            SecureField("Gemini API-Key einfügen...", text: $tempGeminiApiKey)
+            SecureField("\(currentProvider.shortName) API-Key einfügen...", text: $tempApiKey)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 11))
                 .frame(width: 200)
 
             Button("Speichern & Abgleichen") {
-                settings.setGeminiApiKey(tempGeminiApiKey)
+                settings.setApiKey(tempApiKey, for: currentProvider)
                 showApiKeySection = false
-                tempGeminiApiKey = ""
+                tempApiKey = ""
                 triggerMatch()
             }
             .buttonStyle(.borderedProminent)
             .tint(.purple)
             .font(.system(size: 11, weight: .semibold))
-            .disabled(tempGeminiApiKey.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(tempApiKey.trimmingCharacters(in: .whitespaces).isEmpty)
 
-            if settings.hasGeminiApiKey {
+            if settings.hasApiKey(for: currentProvider) {
                 Button("Ausblenden") {
                     showApiKeySection = false
                 }
@@ -1014,17 +1073,18 @@ public struct RenameStudioSheet: View {
         guard !renameItems.isEmpty else { return }
         isMatching = true
         matchingProgress = 0.05
-        matchingStatus = isGeminiActive ? "Initialisiere Google Gemini KI..." : "Initialisiere Abgleich..."
+        let provider = settings.selectedAIProvider
+        matchingStatus = isAIActive ? "Initialisiere \(provider.displayName)..." : "Initialisiere Abgleich..."
 
         let currentMode = mode
-        let effectiveDb: RenameDatabase = (currentMode == .custom && useCustomGeminiAI) ? .gemini : database
+        let effectiveDb: RenameDatabase = (currentMode == .custom && useCustomAI) ? .gemini : database
         let currentLang = language
         let currentFormat = formatExpression
         let currentQuery = seriesQuery
         let currentOutput = currentFolder
         let currentInstruction = aiPromptText
 
-        statusText = isGeminiActive ? "Frage Google Gemini KI ab..." : "Gleiche Dateinamen ab..."
+        statusText = isAIActive ? "Frage \(provider.displayName) ab..." : "Gleiche Dateinamen ab..."
 
         Task {
             do {
@@ -1037,6 +1097,7 @@ public struct RenameStudioSheet: View {
                     seriesQuery: currentQuery,
                     outputFolder: currentOutput,
                     customInstruction: currentInstruction,
+                    aiProvider: provider,
                     onProgress: { progress, status in
                         Task { @MainActor in
                             withAnimation(.easeInOut(duration: 0.25)) {

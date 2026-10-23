@@ -12,10 +12,10 @@ public struct SettingsSheet: View {
     @State private var showConfirmUninstall: Bool = false
     @State private var isTestingCookies: Bool = false
     @State private var cookieTestResult: (success: Bool, message: String)? = nil
-    @State private var geminiApiKeyInput: String = ""
-    @State private var isGeminiKeyVisible: Bool = false
-    @State private var isTestingGemini: Bool = false
-    @State private var geminiTestResult: (success: Bool, message: String)? = nil
+    @State private var currentApiKeyInput: String = ""
+    @State private var isApiKeyVisible: Bool = false
+    @State private var isTestingAI: Bool = false
+    @State private var aiTestResult: (success: Bool, message: String)? = nil
 
     public init(settings: AppSettings) {
         self.settings = settings
@@ -43,7 +43,7 @@ public struct SettingsSheet: View {
             // Tab Picker
             Picker("", selection: $selectedTab) {
                 Text("Allgemein").tag(0)
-                Text("Gemini KI").tag(1)
+                Text("KI-Anbieter").tag(1)
                 Text("Account & Cookies").tag(2)
                 Text("Werkzeuge & Diagnose").tag(3)
                 Text("Changelog").tag(4)
@@ -61,7 +61,7 @@ public struct SettingsSheet: View {
                     if selectedTab == 0 {
                         generalTab
                     } else if selectedTab == 1 {
-                        geminiTab
+                        aiTab
                     } else if selectedTab == 2 {
                         accountTab
                     } else if selectedTab == 3 {
@@ -95,7 +95,7 @@ public struct SettingsSheet: View {
         .background(Color(red: 0.10, green: 0.10, blue: 0.12))
         .onAppear {
             refreshTools()
-            geminiApiKeyInput = settings.getGeminiApiKey()
+            currentApiKeyInput = settings.getApiKey(for: settings.selectedAIProvider)
         }
     }
 
@@ -273,8 +273,8 @@ public struct SettingsSheet: View {
         }
     }
 
-    // MARK: - Tab: Google Gemini KI
-    private var geminiTab: some View {
+    // MARK: - Tab: KI-Anbieter & Modelle (ChatGPT, Claude, Gemini)
+    private var aiTab: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header Card
             HStack(spacing: 12) {
@@ -295,25 +295,51 @@ public struct SettingsSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Google Gemini KI für Medien & Plex")
+                    Text("KI-Anbindung (ChatGPT, Claude & Gemini)")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
-                    Text("Analysiert unstrukturierte Titel und benennt Folgen exakt passend für den Plex Media Server um.")
+                    Text("Wähle deinen bevorzugten KI-Anbieter und hinterlege deinen API-Key sicher im macOS-Schlüsselbund.")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
             }
 
-            // Section 1: API Key & Keychain
+            // Provider Switcher
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Bevorzugter KI-Anbieter")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+
+                Picker("", selection: $settings.selectedAIProvider) {
+                    ForEach(AIProvider.allCases) { provider in
+                        Text(provider.displayName).tag(provider)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: settings.selectedAIProvider) { newProvider in
+                    currentApiKeyInput = settings.getApiKey(for: newProvider)
+                    aiTestResult = nil
+                    isApiKeyVisible = false
+                }
+            }
+
+            // Section 1: API Key & Keychain for Selected Provider
+            let currentProvider = settings.selectedAIProvider
+            let hasKey = settings.hasApiKey(for: currentProvider)
+
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Google Gemini API-Key")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
+                    HStack(spacing: 6) {
+                        Image(systemName: currentProvider.icon)
+                            .foregroundColor(.purple)
+                        Text("\(currentProvider.displayName) API-Key")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
 
                     Spacer()
 
-                    if settings.hasGeminiApiKey {
+                    if hasKey {
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.shield.fill")
                                 .foregroundColor(.green)
@@ -334,38 +360,38 @@ public struct SettingsSheet: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        if isGeminiKeyVisible {
-                            TextField("AIzaSy...", text: $geminiApiKeyInput)
+                        if isApiKeyVisible {
+                            TextField(keyPlaceholder(for: currentProvider), text: $currentApiKeyInput)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(size: 11, design: .monospaced))
                         } else {
-                            SecureField("AIzaSy...", text: $geminiApiKeyInput)
+                            SecureField(keyPlaceholder(for: currentProvider), text: $currentApiKeyInput)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(size: 11, design: .monospaced))
                         }
 
-                        Button(action: { isGeminiKeyVisible.toggle() }) {
-                            Image(systemName: isGeminiKeyVisible ? "eye.slash" : "eye")
+                        Button(action: { isApiKeyVisible.toggle() }) {
+                            Image(systemName: isApiKeyVisible ? "eye.slash" : "eye")
                                 .foregroundColor(.secondary)
                                 .font(.system(size: 12))
                         }
                         .buttonStyle(.plain)
-                        .help(isGeminiKeyVisible ? "Schlüssel maskieren" : "Schlüssel anzeigen")
+                        .help(isApiKeyVisible ? "Schlüssel maskieren" : "Schlüssel anzeigen")
 
                         Button("Speichern") {
-                            settings.setGeminiApiKey(geminiApiKeyInput)
-                            geminiTestResult = (true, "API-Key sicher im macOS-Schlüsselbund gespeichert.")
+                            settings.setApiKey(currentApiKeyInput, for: currentProvider)
+                            aiTestResult = (true, "\(currentProvider.shortName) API-Key sicher im macOS-Schlüsselbund gespeichert.")
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.purple)
                         .font(.system(size: 11, weight: .semibold))
-                        .disabled(geminiApiKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(currentApiKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
 
-                        if settings.hasGeminiApiKey {
+                        if hasKey {
                             Button("Löschen") {
-                                settings.deleteGeminiApiKey()
-                                geminiApiKeyInput = ""
-                                geminiTestResult = nil
+                                settings.deleteApiKey(for: currentProvider)
+                                currentApiKeyInput = ""
+                                aiTestResult = nil
                             }
                             .buttonStyle(.bordered)
                             .font(.system(size: 11))
@@ -375,29 +401,27 @@ public struct SettingsSheet: View {
 
                     // Key Test Button & Link
                     HStack(spacing: 10) {
-                        Button(action: testGeminiApiKey) {
-                            if isTestingGemini {
+                        Button(action: testCurrentApiKey) {
+                            if isTestingAI {
                                 ProgressView()
                                     .scaleEffect(0.6)
                                     .frame(width: 14, height: 14)
                             } else {
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark.circle")
-                                    Text("Verbindung zu \(settings.geminiModel) testen")
+                                    Text("Verbindung zu \(currentProvider.shortName) (\(settings.getModel(for: currentProvider))) testen")
                                 }
                                 .font(.system(size: 11))
                             }
                         }
                         .buttonStyle(.bordered)
-                        .disabled(isTestingGemini || geminiApiKeyInput.isEmpty)
+                        .disabled(isTestingAI || currentApiKeyInput.isEmpty)
 
                         Button(action: {
-                            if let url = URL(string: "https://aistudio.google.com/app/apikey") {
-                                NSWorkspace.shared.open(url)
-                            }
+                            NSWorkspace.shared.open(currentProvider.portalURL)
                         }) {
                             HStack(spacing: 3) {
-                                Text("Kostenlosen API-Key bei Google AI Studio holen")
+                                Text("API-Key bei \(currentProvider.portalDisplayName) holen")
                                 Image(systemName: "arrow.up.right")
                             }
                             .font(.system(size: 10))
@@ -406,7 +430,7 @@ public struct SettingsSheet: View {
                         .buttonStyle(.plain)
                     }
 
-                    if let result = geminiTestResult {
+                    if let result = aiTestResult {
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: result.success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                 .foregroundColor(result.success ? .green : .orange)
@@ -429,27 +453,30 @@ public struct SettingsSheet: View {
 
             // Section 2: Model Selection
             VStack(alignment: .leading, spacing: 10) {
-                Text("KI-Modell auswählen")
+                Text("Modell für \(currentProvider.displayName)")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Picker("Modell:", selection: $settings.geminiModel) {
-                            ForEach(GeminiModelOption.availableModels) { opt in
+                        Picker("Modell:", selection: Binding(
+                            get: { settings.getModel(for: currentProvider) },
+                            set: { settings.setModel($0, for: currentProvider) }
+                        )) {
+                            ForEach(AIModelOption.models(for: currentProvider)) { opt in
                                 Text("\(opt.displayName)\(opt.isRecommended ? " (Empfohlen)" : "")").tag(opt.id)
                             }
                         }
                         .pickerStyle(.menu)
                         .font(.system(size: 12))
-                        .onChange(of: settings.geminiModel) { _ in
-                            geminiTestResult = nil
+                        .onChange(of: settings.getModel(for: currentProvider)) { _ in
+                            aiTestResult = nil
                         }
 
                         Spacer()
                     }
 
-                    if let selected = GeminiModelOption.availableModels.first(where: { $0.id == settings.geminiModel }) {
+                    if let selected = AIModelOption.models(for: currentProvider).first(where: { $0.id == settings.getModel(for: currentProvider) }) {
                         Text(selected.description)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
@@ -461,7 +488,7 @@ public struct SettingsSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
 
-            // Section 3: Plex Naming Options
+            // Section 3: Plex Media Server Formatting Options
             VStack(alignment: .leading, spacing: 10) {
                 Text("Plex Media Server Formatierungs-Optionen")
                     .font(.system(size: 13, weight: .semibold))
@@ -510,6 +537,14 @@ public struct SettingsSheet: View {
                 .cornerRadius(8)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
+        }
+    }
+
+    private func keyPlaceholder(for provider: AIProvider) -> String {
+        switch provider {
+        case .gemini: return "AIzaSy..."
+        case .chatgpt: return "sk-..."
+        case .claude: return "sk-ant-..."
         }
     }
 
@@ -1019,20 +1054,23 @@ public struct SettingsSheet: View {
         }
     }
 
-    private func testGeminiApiKey() {
-        isTestingGemini = true
-        geminiTestResult = nil
-        let keyToTest = geminiApiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func testCurrentApiKey() {
+        let provider = settings.selectedAIProvider
+        isTestingAI = true
+        aiTestResult = nil
+        let keyToTest = currentApiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let model = settings.getModel(for: provider)
         Task {
-            let res = await GeminiService.shared.testApiKey(
+            let res = await AIService.shared.testApiKey(
+                provider: provider,
                 apiKey: keyToTest,
-                model: settings.geminiModel
+                model: model
             )
             await MainActor.run {
-                self.geminiTestResult = res
-                self.isTestingGemini = false
+                self.aiTestResult = res
+                self.isTestingAI = false
                 if res.success {
-                    settings.setGeminiApiKey(keyToTest)
+                    settings.setApiKey(keyToTest, for: provider)
                 }
             }
         }

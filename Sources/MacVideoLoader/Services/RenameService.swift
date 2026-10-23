@@ -80,23 +80,26 @@ public final class RenameService: @unchecked Sendable {
         seriesQuery: String?,
         outputFolder: URL,
         customInstruction: String? = nil,
+        aiProvider: AIProvider? = nil,
         onProgress: (@Sendable (Double, String) -> Void)? = nil
     ) async throws {
         onProgress?(0.1, "Initialisiere Abgleich...")
 
-        // 0. If Gemini AI is selected
+        // 0. If AI is selected
         if database == .gemini {
-            let apiKey = AppSettings.shared.getGeminiApiKey()
+            let provider = aiProvider ?? AppSettings.shared.selectedAIProvider
+            let apiKey = AppSettings.shared.getApiKey(for: provider)
             if apiKey.isEmpty {
-                throw NSError(domain: "RenameService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Kein Google Gemini API-Key hinterlegt. Bitte trage deinen API-Key in den Einstellungen ein."])
+                throw NSError(domain: "RenameService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Kein \(provider.displayName) API-Key hinterlegt. Bitte trage deinen API-Key in den Einstellungen ein."])
             }
 
-            let model = AppSettings.shared.geminiModel
-            onProgress?(0.3, "Sende Anfrage an Google Gemini (\(model))...")
+            let model = AppSettings.shared.getModel(for: provider)
+            onProgress?(0.3, "Sende Anfrage an \(provider.displayName) (\(model))...")
 
             if mode == .custom {
-                let proposals = try await GeminiService.shared.analyzeCustomFiles(
+                let proposals = try await AIService.shared.analyzeCustomFiles(
                     items: items,
+                    provider: provider,
                     apiKey: apiKey,
                     model: model,
                     customInstruction: customInstruction ?? ""
@@ -111,7 +114,7 @@ public final class RenameService: @unchecked Sendable {
                             item.proposedRelativePath = rel
                             item.proposedName = prop.proposedName
                             item.isMatched = true
-                            var status = "✨ Gemini (\(model))"
+                            var status = "✨ \(provider.shortName) (\(model))"
                             if let reason = prop.reasoning, !reason.isEmpty {
                                 status += " • \(reason)"
                             }
@@ -126,8 +129,9 @@ public final class RenameService: @unchecked Sendable {
                 let seasonFolder = AppSettings.shared.geminiPlexSeasonFolder
                 let includeYear = AppSettings.shared.geminiIncludeYear
 
-                let proposals = try await GeminiService.shared.analyzeForPlex(
+                let proposals = try await AIService.shared.analyzeForPlex(
                     items: items,
+                    provider: provider,
                     apiKey: apiKey,
                     model: model,
                     seasonPrefix: seasonFolder,
@@ -176,7 +180,7 @@ public final class RenameService: @unchecked Sendable {
                             item.seasonNumber = prop.seasonNumber
                             item.episodeNumber = prop.episodeNumber
                             item.isMatched = true
-                            var status = "✨ Gemini (\(model)) • S\(sPad)E\(ePad)"
+                            var status = "✨ \(provider.shortName) (\(model)) • S\(sPad)E\(ePad)"
                             if let reason = prop.reasoning, !reason.isEmpty {
                                 status += " • \(reason)"
                             }

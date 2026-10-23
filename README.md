@@ -3,25 +3,27 @@
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue.svg)](https://www.apple.com/macos/)
 
-Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, ein integriertes **Rename Studio** mit **Google Gemini KI-Unterstützung**, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
+Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, ein integriertes **Rename Studio** mit **Multi-KI-Unterstützung (ChatGPT, Claude & Gemini)**, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
 
 ---
 
 ## Highlights & Features
 
-- **Rename Studio & Google Gemini KI-Integration (Neu in v0.7.0):**
+- **Rename Studio & Multi-KI-Integration (ChatGPT, Claude & Gemini – Neu in v0.7.0):**
+  - **Freie Wahl des KI-Anbieters**: Unterstützt **ChatGPT (OpenAI)**, **Claude (Anthropic)** und **Google Gemini** für intelligente Benennungsvorschläge.
   - **Automatischer Umbenennungs-Prompt nach Downloads**: Nach jedem Download fragt MVL auf Wunsch, ob die Dateien direkt in einheitliche Serien- oder Staffelstrukturen umbenannt werden sollen.
   - **Bestehende Mac-Ordner rekursiv umbenennen**: Über den Button „Dateien umbenennen...“ in der Top-Navigation oder per Drag & Drop können beliebige Ordner inklusive aller Unterordner eingelesen und verarbeitet werden.
   - **Drei spezialisierte Verarbeitungsmodi**:
     - `Serienverarbeitung`: Einheitliche Namensgebung für TV-Folgen (`{n} - {s00e00} - {t}`).
     - `Staffelverarbeitung`: Automatische Staffelordner-Hierarchien für Plex/Jellyfin (`{n}/Staffel {s.pad(2)}/{n} - {s00e00} - {t}`).
     - `Dateien & Markup`: Beliebige Dateitypen nach benutzerdefinierten Schemata (`{folder} - {index.pad(2)} - {original}`), Tokens oder freitextlichen KI-Prompts umbenennen.
-  - **Google Gemini KI (Plex- & Dokumenten-Optimierung)**:
-    - Native Google Gemini Integration (Gemini 2.5 Flash / Pro) für sekundenschnelle, intelligente Benennungsvorschläge.
+  - **Intelligente KI-Umbenennung (Plex- & Dokumenten-Optimierung)**:
+    - Modell-Auswahl je nach Anbieter (`gpt-4o-mini`, `gpt-4o`, `o3-mini`, `claude-3-5-haiku`, `claude-3-5-sonnet`, `gemini-2.5-flash`, `gemini-2.5-pro`).
     - **Recherche echter Episodennummern**: Gleicht Episodentitel mit TMDb/TVDB ab, sodass Folgen nach ihrem tatsächlichen Inhalt nummeriert werden – unabhängig vom Anfangsbuchstaben des Titels.
     - **Dediziertes KI-Prompt-Eingabefeld**: Individuelle Anweisungen und Zusatzhinweise direkt an die KI übergeben (inkl. Ideen-Schnellmenü für TV-Serien, Rechnungen, Fotos und Jahresordner).
     - **Expliziter Abgleich**: Der Abgleich startet nicht automatisch, sondern erst bei Klick auf „Abgleichen“.
-    - **Höchste Sicherheit**: Gemini API-Keys werden verschlüsselt im macOS-Schlüsselbund (`KeychainService`) gespeichert.
+    - **Höchste Sicherheit**: API-Keys aller Anbieter werden getrennt und verschlüsselt im macOS-Schlüsselbund (`KeychainService`) gespeichert.
+  - **Visuelle Fortschrittsbalken**: Separate Live-Balken für Analyse/Abgleich und Umbenennungsausführung mit Prozentanzeige und Dateidetails.
   - **Markup-Token-Engine**: 1-Klick-Einfügung von Tokens (`{original}`, `{folder}`, `{date}`, `{year}`, `{index.pad(2)}`, `{clean}`, `{lower}`, `{ext}`).
   - **Dateifilter & Checkbox-Auswahl**: Schnelles Filtern nach Dateikategorien (Videos, Audio, Dokumente, Bilder, Sonstige) mit Zählern und selektivem Ein-/Ausschließen.
   - **Eigene Queue-Abschnitte**: Abgeschlossene und fehlerhafte Downloads landen übersichtlich in separaten, ein- und ausklappbaren Abschnitten am Listenende.

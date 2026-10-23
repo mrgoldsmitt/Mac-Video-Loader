@@ -1,5 +1,8 @@
 # Mac Video Loader (MVL) für macOS – v0.5.1
 
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue.svg)](https://www.apple.com/macos/)
+
 Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
 
 ---
@@ -165,3 +168,19 @@ Das Deployment kann wahlweise lokal über das bereitgestellte Skript oder automa
   ```
 * **Automatisierte CI/CD-Pipeline (GitHub Actions):**
   Sobald ein Versions-Tag (z. B. `v0.5.1`) gepusht wird, baut GitHub Actions das DMG automatisch auf einem macOS-Runner und veröffentlicht es als GitHub Release.
+
+---
+
+## Lizenz & Urheberrecht
+
+Dieses Werk bzw. dieser Inhalt ist lizenziert unter einer **[Creative Commons Namensnennung - Nicht-kommerziell 4.0 International Lizenz (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/deed.de)**.
+
+Copyright (c) 2026 **mrgoldsmitt**
+
+### Kurzüberblick der Bedingungen:
+* **Teilen & Weiterverbreiten (Share):** Du darfst das Material in jedwedem Format oder Medium vervielfältigen und weiterverbreiten.
+* **Bearbeiten (Adapt):** Du darfst das Material remixen, verändern und darauf aufbauen.
+* **Namensnennung (Attribution - BY):** Du musst angemessene Urheber- und Rechteangaben machen (Autor: `mrgoldsmitt`), einen Link zur Lizenz beifügen und angeben, ob Änderungen vorgenommen wurden.
+* **Nicht-kommerziell (Non-Commercial - NC):** Du darfst das Material **nicht für kommerzielle Zwecke** nutzen.
+
+Der vollständige Lizenztext befindet sich in der Datei [LICENSE](LICENSE) oder online unter [creativecommons.org/licenses/by-nc/4.0/](https://creativecommons.org/licenses/by-nc/4.0/).

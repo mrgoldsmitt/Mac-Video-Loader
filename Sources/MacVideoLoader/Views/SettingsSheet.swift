@@ -213,6 +213,30 @@ public struct SettingsSheet: View {
             } message: {
                 Text("Die Anwendung wird aus /Applications gelöscht.")
             }
+
+            // Lizenz & Urheberrecht Section
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Lizenz & Urheberrecht")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "c.circle")
+                            .foregroundColor(.accentColor)
+                        Text("Creative Commons Namensnennung - Nicht-kommerziell 4.0 (CC BY-NC 4.0)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    Text("Dieses Projekt darf unter Nennung des Autors (mrgoldsmitt) frei geteilt und verbreitet werden. Eine kommerzielle Nutzung ist ausgeschlossen.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(10)
+                .background(Color.black.opacity(0.25))
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
         }
     }
 

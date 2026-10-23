@@ -10,6 +10,8 @@ public class DownloadManager: ObservableObject {
     @Published public var activeCount: Int = 0
     @Published public var overallProgress: Double = 0.0
     @Published public var detectedPlaylist: PlaylistInfo? = nil
+    @Published public var customDestinationFolder: URL? = nil
+    @Published public var pendingPlaylistCustomFolder: URL? = nil
     @Published public var isAnalyzingURL: Bool = false
     @Published public var analysisError: String? = nil
     @Published public var analysisProgress: Double = 0.0
@@ -68,13 +70,15 @@ public class DownloadManager: ObservableObject {
         analysisStatusText = ""
         analysisItemsFound = 0
         analysisTotalItems = nil
+        pendingPlaylistCustomFolder = nil
     }
 
     public func analyzeOrAddURL(
         _ text: String,
         downloadType: DownloadType,
         videoQuality: VideoQuality,
-        audioFormat: AudioFormat
+        audioFormat: AudioFormat,
+        customDestinationFolder: URL? = nil
     ) {
         let lines = text.components(separatedBy: CharacterSet.newlines)
         var urls: [String] = []
@@ -91,9 +95,11 @@ public class DownloadManager: ObservableObject {
 
         guard !urls.isEmpty else { return }
 
+        let effectiveFolder = customDestinationFolder ?? self.customDestinationFolder
+
         // If multiple URLs were entered at once, enqueue directly
         if urls.count > 1 {
-            addURLs(text, downloadType: downloadType, videoQuality: videoQuality, audioFormat: audioFormat)
+            addURLs(text, downloadType: downloadType, videoQuality: videoQuality, audioFormat: audioFormat, customDestinationFolder: effectiveFolder)
             return
         }
 
@@ -106,6 +112,7 @@ public class DownloadManager: ObservableObject {
         analysisStatusText = "Verbinde mit Webseite & rufe Inhaltsstruktur ab..."
         analysisItemsFound = 0
         analysisTotalItems = nil
+        pendingPlaylistCustomFolder = effectiveFolder
 
         currentAnalysisTask = Task { [weak self] in
             guard let self = self else { return }
@@ -133,12 +140,14 @@ public class DownloadManager: ObservableObject {
                     self.detectedPlaylist = playlist
 
                 case .singleVideo(let meta):
+                    let targetFolder = effectiveFolder ?? self.settings.downloadFolder
+                    try? FileManager.default.createDirectory(at: targetFolder, withIntermediateDirectories: true)
                     let item = DownloadItem(
                         url: singleURL,
                         downloadType: downloadType,
                         videoQuality: videoQuality,
                         audioFormat: audioFormat,
-                        destinationFolder: settings.downloadFolder,
+                        destinationFolder: targetFolder,
                         status: .queued
                     )
                     item.title = meta.title.isEmpty ? singleURL : meta.title
@@ -171,16 +180,19 @@ public class DownloadManager: ObservableObject {
         playlist: PlaylistInfo? = nil,
         downloadType: DownloadType,
         videoQuality: VideoQuality,
-        audioFormat: AudioFormat
+        audioFormat: AudioFormat,
+        customBaseFolder: URL? = nil
     ) {
         guard !items.isEmpty else { return }
+
+        let baseFolder = customBaseFolder ?? pendingPlaylistCustomFolder ?? self.customDestinationFolder ?? settings.downloadFolder
 
         for pItem in items {
             let targetFolder: URL
             if let pl = playlist {
-                targetFolder = pl.targetFolder(for: pItem, baseFolder: settings.downloadFolder)
+                targetFolder = pl.targetFolder(for: pItem, baseFolder: baseFolder)
             } else {
-                targetFolder = settings.downloadFolder
+                targetFolder = baseFolder
             }
 
             try? FileManager.default.createDirectory(at: targetFolder, withIntermediateDirectories: true)
@@ -212,7 +224,8 @@ public class DownloadManager: ObservableObject {
         _ text: String,
         downloadType: DownloadType,
         videoQuality: VideoQuality,
-        audioFormat: AudioFormat
+        audioFormat: AudioFormat,
+        customDestinationFolder: URL? = nil
     ) {
         let lines = text.components(separatedBy: CharacterSet.newlines)
         var urls: [String] = []
@@ -229,13 +242,16 @@ public class DownloadManager: ObservableObject {
 
         guard !urls.isEmpty else { return }
 
+        let targetFolder = customDestinationFolder ?? self.customDestinationFolder ?? settings.downloadFolder
+        try? FileManager.default.createDirectory(at: targetFolder, withIntermediateDirectories: true)
+
         for url in urls {
             let item = DownloadItem(
                 url: url,
                 downloadType: downloadType,
                 videoQuality: videoQuality,
                 audioFormat: audioFormat,
-                destinationFolder: settings.downloadFolder,
+                destinationFolder: targetFolder,
                 status: .queued
             )
             queue.append(item)

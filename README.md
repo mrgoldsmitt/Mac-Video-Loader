@@ -1,15 +1,23 @@
-# Mac Video Loader (MVL) für macOS – v0.5.2
+# Mac Video Loader (MVL) für macOS – v0.6.0
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue.svg)](https://www.apple.com/macos/)
 
-Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
+Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
 
 ---
 
 ## Highlights & Features
 
-- **Open-Source-Release, GitHub Pipeline & CC BY-NC 4.0 (Neu in v0.5.2):**
+- **Freie Zielordner-Wahl in der Übersicht & Stapel-Download (Neu in v0.6.0):**
+  - **Zielordner direkt beim Hinzufügen bestimmen**: Direkt in der Eingabeleiste der Übersicht kann für einzelne Videos oder Playlists ein eigener Zielordner gewählt werden.
+  - **Nahtloser Standard-Fallback**: Bleibt die Auswahl leer oder wird zurückgesetzt, speichert MVL automatisch im in den Einstellungen hinterlegten Standard-Zielordner.
+  - **Stapel-Download mit Ordnerauswahl**: Auch im Dialog „Mehrere URLs...“ (`BatchAddSheet`) kann der Zielordner flexibel vorab festgelegt oder angepasst werden.
+  - **Finder Drag & Drop**: Beliebige Zielordner können direkt aus dem macOS Finder per Drag & Drop auf die Zielordner-Leiste in der Übersicht abgelegt werden.
+  - **Intelligente Ordnerstrukturierung**: Playlist- und Staffel-Downloads beachten den ausgewählten Basisordner und ordnen Folgen und Staffeln sauber in Unterordnern darunter ein.
+  - **Smarte Ordner-Anzeige in der Queue**: Download-Kacheln visualisieren ihren Zielordner inklusive Hover-Tooltip für den vollständigen Pfad.
+
+- **Open-Source-Release, GitHub Pipeline & CC BY-NC 4.0 (v0.5.2):**
   - **Öffentliches GitHub-Repository**: Vollständig quelloffen unter `github.com/mrgoldsmitt/Mac-Video-Loader` mit Release-Artefakten.
   - **Creative Commons Lizenz (CC BY-NC 4.0)**: Freie Weitergabe und Anpassung unter Namensnennung von Autor `mrgoldsmitt` für nicht-kommerzielle Zwecke.
   - **In-App Lizenzanzeige**: Lizenz- und Urheberrechtsansicht direkt im Einstellungen-Dialog (Reiter Allgemein).
@@ -170,11 +178,11 @@ Das Deployment kann wahlweise lokal über das bereitgestellte Skript oder automa
 
 * **Lokaler 1-Klick-Deploy:**
   ```bash
-  # Baut das App-Bundle & DMG, setzt den Git-Tag (z.B. v0.5.2) und lädt das Release auf GitHub hoch
+  # Baut das App-Bundle & DMG, setzt den Git-Tag (z.B. v0.6.0) und lädt das Release auf GitHub hoch
   ./deploy_release.sh
   ```
 * **Automatisierte CI/CD-Pipeline (GitHub Actions):**
-  Sobald ein Versions-Tag (z. B. `v0.5.2`) gepusht wird, baut GitHub Actions das DMG automatisch auf einem macOS-Runner und veröffentlicht es als GitHub Release.
+  Sobald ein Versions-Tag (z. B. `v0.6.0`) gepusht wird, baut GitHub Actions das DMG automatisch auf einem macOS-Runner und veröffentlicht es als GitHub Release.
 
 ---
 

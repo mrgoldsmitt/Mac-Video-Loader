@@ -207,6 +207,108 @@ public struct HeaderInputView: View {
                 .buttonStyle(.plain)
                 .help("Mehrere Links oder Playlists auf einmal importieren")
             }
+
+            // Destination Folder Strip (Zielordner-Auswahl)
+            HStack(spacing: 8) {
+                Image(systemName: downloadManager.customDestinationFolder != nil ? "folder.fill.badge.gearshape" : "folder.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(downloadManager.customDestinationFolder != nil ? Color(red: 0.35, green: 0.75, blue: 1.0) : .yellow.opacity(0.85))
+
+                Text("Zielordner:")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+
+                if let custom = downloadManager.customDestinationFolder {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.green)
+
+                        Text(custom.path)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+
+                        Button(action: {
+                            downloadManager.customDestinationFolder = nil
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Auf Standard-Zielordner zurücksetzen")
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.blue.opacity(0.2))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.blue.opacity(0.45), lineWidth: 1)
+                    )
+                } else {
+                    HStack(spacing: 4) {
+                        Text("Standard:")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text(AppSettings.shared.downloadFolder.path)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.8))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.04))
+                    .cornerRadius(6)
+                }
+
+                Spacer()
+
+                HStack(spacing: 6) {
+                    if downloadManager.customDestinationFolder != nil {
+                        Button("Standard nutzen") {
+                            downloadManager.customDestinationFolder = nil
+                        }
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .buttonStyle(.plain)
+                    }
+
+                    Button(action: chooseFolder) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "folder")
+                                .font(.system(size: 10))
+                            Text(downloadManager.customDestinationFolder == nil ? "Zielordner wählen..." : "Ändern...")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.white.opacity(0.08))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Abweichenden Zielordner für neue Downloads auswählen oder Ordner hierhin ziehen")
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.black.opacity(0.22))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(downloadManager.customDestinationFolder != nil ? Color.blue.opacity(0.35) : Color.white.opacity(0.06), lineWidth: 1)
+            )
+            .onDrop(of: ["public.file-url"], isTargeted: nil) { providers in
+                handleFolderDrop(providers: providers)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -227,7 +329,8 @@ public struct HeaderInputView: View {
             trimmed,
             downloadType: downloadType,
             videoQuality: selectedQuality,
-            audioFormat: selectedAudioFormat
+            audioFormat: selectedAudioFormat,
+            customDestinationFolder: downloadManager.customDestinationFolder
         )
         urlText = ""
     }
@@ -236,5 +339,45 @@ public struct HeaderInputView: View {
         if let string = NSPasteboard.general.string(forType: .string) {
             urlText = string.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+    }
+
+    private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Zielordner wählen"
+        panel.message = "Wähle einen Zielordner für neue Downloads:"
+        if let current = downloadManager.customDestinationFolder {
+            panel.directoryURL = current
+        } else {
+            panel.directoryURL = AppSettings.shared.downloadFolder
+        }
+
+        if panel.runModal() == .OK, let url = panel.url {
+            downloadManager.customDestinationFolder = url
+        }
+    }
+
+    private func handleFolderDrop(providers: [NSItemProvider]) -> Bool {
+        guard let provider = providers.first else { return false }
+        provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+            var folderURL: URL?
+            if let u = item as? URL {
+                folderURL = u
+            } else if let data = item as? Data, let str = String(data: data, encoding: .utf8), let u = URL(string: str) {
+                folderURL = u
+            }
+            if let folderURL = folderURL {
+                var isDir: ObjCBool = false
+                if FileManager.default.fileExists(atPath: folderURL.path, isDirectory: &isDir), isDir.boolValue {
+                    DispatchQueue.main.async {
+                        self.downloadManager.customDestinationFolder = folderURL
+                    }
+                }
+            }
+        }
+        return true
     }
 }

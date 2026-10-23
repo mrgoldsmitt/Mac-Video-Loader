@@ -8,9 +8,11 @@ public struct BatchAddSheet: View {
     @State private var downloadType: DownloadType = .video
     @State private var selectedQuality: VideoQuality = .best
     @State private var selectedAudioFormat: AudioFormat = .mp3
+    @State private var customFolder: URL?
 
     public init(downloadManager: DownloadManager) {
         self.downloadManager = downloadManager
+        _customFolder = State(initialValue: downloadManager.customDestinationFolder)
     }
 
     private var recognizedUrlsCount: Int {
@@ -83,6 +85,104 @@ public struct BatchAddSheet: View {
                 Spacer()
             }
 
+            // Target Destination Folder Strip
+            HStack(spacing: 8) {
+                Image(systemName: customFolder != nil ? "folder.fill.badge.gearshape" : "folder.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(customFolder != nil ? Color(red: 0.35, green: 0.75, blue: 1.0) : .yellow.opacity(0.85))
+
+                Text("Zielordner:")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+
+                if let custom = customFolder {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.green)
+
+                        Text(custom.path)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+
+                        Button(action: {
+                            customFolder = nil
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Auf Standard-Zielordner zurücksetzen")
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.blue.opacity(0.2))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.blue.opacity(0.45), lineWidth: 1)
+                    )
+                } else {
+                    HStack(spacing: 4) {
+                        Text("Standard:")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text(AppSettings.shared.downloadFolder.path)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.8))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.04))
+                    .cornerRadius(6)
+                }
+
+                Spacer()
+
+                HStack(spacing: 6) {
+                    if customFolder != nil {
+                        Button("Standard") {
+                            customFolder = nil
+                        }
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .buttonStyle(.plain)
+                    }
+
+                    Button(action: chooseFolder) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "folder")
+                                .font(.system(size: 10))
+                            Text(customFolder == nil ? "Ordner wählen..." : "Ändern...")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.white.opacity(0.08))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.black.opacity(0.22))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(customFolder != nil ? Color.blue.opacity(0.35) : Color.white.opacity(0.06), lineWidth: 1)
+            )
+
             Divider()
                 .background(Color.white.opacity(0.1))
 
@@ -100,11 +200,13 @@ public struct BatchAddSheet: View {
                 .keyboardShortcut(.cancelAction)
 
                 Button("Zur Warteschlange hinzufügen") {
+                    downloadManager.customDestinationFolder = customFolder
                     downloadManager.addURLs(
                         batchText,
                         downloadType: downloadType,
                         videoQuality: selectedQuality,
-                        audioFormat: selectedAudioFormat
+                        audioFormat: selectedAudioFormat,
+                        customDestinationFolder: customFolder
                     )
                     dismiss()
                 }
@@ -115,7 +217,26 @@ public struct BatchAddSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 560, height: 380)
+        .frame(width: 580, height: 420)
         .background(Color(red: 0.12, green: 0.12, blue: 0.14))
+    }
+
+    private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Zielordner wählen"
+        panel.message = "Wähle einen Zielordner für diese Downloads:"
+        if let current = customFolder {
+            panel.directoryURL = current
+        } else {
+            panel.directoryURL = AppSettings.shared.downloadFolder
+        }
+
+        if panel.runModal() == .OK, let url = panel.url {
+            customFolder = url
+        }
     }
 }

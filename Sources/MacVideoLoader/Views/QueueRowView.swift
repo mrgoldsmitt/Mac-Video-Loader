@@ -93,13 +93,21 @@ public struct QueueRowView: View {
                     }
 
                     if item.destinationFolder.path != AppSettings.shared.downloadFolder.path {
-                        let sub = item.destinationFolder.path.replacingOccurrences(of: AppSettings.shared.downloadFolder.path, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                        if !sub.isEmpty {
+                        let folderName: String = {
+                            if item.destinationFolder.path.hasPrefix(AppSettings.shared.downloadFolder.path) {
+                                let sub = item.destinationFolder.path.replacingOccurrences(of: AppSettings.shared.downloadFolder.path, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                                return sub.isEmpty ? item.destinationFolder.lastPathComponent : sub
+                            } else {
+                                return item.destinationFolder.lastPathComponent
+                            }
+                        }()
+
+                        if !folderName.isEmpty {
                             HStack(spacing: 3) {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 9))
                                     .foregroundColor(.yellow.opacity(0.85))
-                                Text(sub)
+                                Text(folderName)
                                     .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
@@ -108,6 +116,7 @@ public struct QueueRowView: View {
                             .padding(.vertical, 1.5)
                             .background(Color.white.opacity(0.06))
                             .cornerRadius(3)
+                            .help(item.destinationFolder.path)
                         }
                     }
                 }

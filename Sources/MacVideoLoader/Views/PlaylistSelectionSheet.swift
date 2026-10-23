@@ -12,12 +12,14 @@ public struct PlaylistSelectionSheet: View {
     @State private var downloadType: DownloadType = .video
     @State private var selectedQuality: VideoQuality = .best
     @State private var selectedAudioFormat: AudioFormat = .mp3
+    @State private var customBaseFolder: URL?
 
     public init(playlist: PlaylistInfo, downloadManager: DownloadManager) {
         self.playlist = playlist
         self.downloadManager = downloadManager
         // Select all items initially
         _selectedItemIds = State(initialValue: Set(playlist.items.map { $0.id }))
+        _customBaseFolder = State(initialValue: downloadManager.pendingPlaylistCustomFolder ?? downloadManager.customDestinationFolder)
     }
 
     private var filteredItems: [PlaylistItem] {
@@ -155,6 +157,7 @@ public struct PlaylistSelectionSheet: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
 
+                    let base = customBaseFolder ?? AppSettings.shared.downloadFolder
                     let folderLabel: String = {
                         if playlist.isSeasonOrSeries {
                             let series = playlist.effectiveSeriesTitle
@@ -169,7 +172,7 @@ public struct PlaylistSelectionSheet: View {
                         }
                     }()
 
-                    Text(folderLabel)
+                    Text("\(base.path)/\(folderLabel)")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundColor(.white.opacity(0.9))
                         .padding(.horizontal, 5)
@@ -177,6 +180,26 @@ public struct PlaylistSelectionSheet: View {
                         .background(Color.white.opacity(0.08))
                         .cornerRadius(3)
                         .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help("\(base.path)/\(folderLabel)")
+
+                    Button(action: chooseBaseFolder) {
+                        Image(systemName: "pencil.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Basis-Zielordner ändern")
+
+                    if customBaseFolder != nil {
+                        Button(action: { customBaseFolder = nil }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Auf Standard-Zielordner zurücksetzen")
+                    }
                 }
             }
 
@@ -609,10 +632,30 @@ public struct PlaylistSelectionSheet: View {
             playlist: playlist,
             downloadType: downloadType,
             videoQuality: selectedQuality,
-            audioFormat: selectedAudioFormat
+            audioFormat: selectedAudioFormat,
+            customBaseFolder: customBaseFolder
         )
 
         downloadManager.detectedPlaylist = nil
         dismiss()
+    }
+
+    private func chooseBaseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Basisordner wählen"
+        panel.message = "Wähle einen Basisordner für diese Playlist / Serie:"
+        if let current = customBaseFolder {
+            panel.directoryURL = current
+        } else {
+            panel.directoryURL = AppSettings.shared.downloadFolder
+        }
+
+        if panel.runModal() == .OK, let url = panel.url {
+            customBaseFolder = url
+        }
     }
 }

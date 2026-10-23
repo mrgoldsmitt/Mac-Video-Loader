@@ -71,7 +71,7 @@ public struct SettingsSheet: View {
 
             // Footer
             HStack {
-                Text("Mac Video Loader v0.5.2 (MVL)")
+                Text("Mac Video Loader v0.6.0 (MVL)")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.6))
                 Spacer()
@@ -466,7 +466,7 @@ public struct SettingsSheet: View {
                         Text("Mac Video Loader")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.white)
-                        Text("v0.5.2 (MVL)")
+                        Text("v0.6.0 (MVL)")
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -499,6 +499,20 @@ public struct SettingsSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
+                    changelogSection(
+                        icon: "folder.badge.plus",
+                        color: .blue,
+                        title: "Version 0.6.0 - Freie Zielordner-Wahl in der Übersicht & Stapel-Download",
+                        items: [
+                            "Freie Zielordner-Wahl in der Übersicht: Direkt beim Einfügen von Video- oder Webseiten-Links kann ein individueller Zielordner für den anstehenden Download ausgewählt werden.",
+                            "Automatischer Fallback: Bleibt das Feld unberührt oder wird zurückgesetzt, wird nahtlos der Standard-Zielordner genutzt.",
+                            "Stapel-Download mit Zielordner-Wahl: Auch im Dialog 'Mehrere URLs...' (BatchAddSheet) kann direkt ein spezifischer Zielordner festgelegt oder angepasst werden.",
+                            "Drag & Drop von Ordnern: Zielordner können direkt aus dem Finder per Drag & Drop auf die Zielordner-Leiste in der Übersicht abgelegt werden.",
+                            "Playlist- & Staffel-Routing: Serien- und Playlisten-Downloads berücksichtigen den gewählten Basisordner und strukturieren Staffeln und Episoden sauber darunter.",
+                            "Smarte Ordner-Pille in der Warteschlange: Einträge visualisieren ihren Zielordner übersichtlich, inklusive Hover-Tooltip für den vollständigen Pfad."
+                        ]
+                    )
+
                     changelogSection(
                         icon: "globe.americas.fill",
                         color: .purple,

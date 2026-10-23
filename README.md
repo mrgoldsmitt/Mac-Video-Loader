@@ -3,13 +3,13 @@
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue.svg)](https://www.apple.com/macos/)
 
-Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, ein integriertes **FileBot Rename Studio** mit **Google Gemini KI-Unterstützung**, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
+Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, ein integriertes **Rename Studio** mit **Google Gemini KI-Unterstützung**, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
 
 ---
 
 ## Highlights & Features
 
-- **FileBot Rename Studio & Google Gemini KI-Integration (Neu in v0.7.0):**
+- **Rename Studio & Google Gemini KI-Integration (Neu in v0.7.0):**
   - **Automatischer Umbenennungs-Prompt nach Downloads**: Nach jedem Download fragt MVL auf Wunsch, ob die Dateien direkt in einheitliche Serien- oder Staffelstrukturen umbenannt werden sollen.
   - **Bestehende Mac-Ordner rekursiv umbenennen**: Über den Button „Dateien umbenennen...“ in der Top-Navigation oder per Drag & Drop können beliebige Ordner inklusive aller Unterordner eingelesen und verarbeitet werden.
   - **Drei spezialisierte Verarbeitungsmodi**:

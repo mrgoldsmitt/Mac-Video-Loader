@@ -107,14 +107,14 @@ public struct QueueListView: View {
 
                 // Category Quick Actions
                 HStack(spacing: 8) {
-                    // FileBot Rename Button
+                    // Rename Studio Button
                     Button(action: {
-                        downloadManager.openFileBotRenamer(items: completedItems)
+                        downloadManager.openRenameStudio(items: completedItems)
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "pencil.and.list.clipboard")
                                 .font(.system(size: 10, weight: .bold))
-                            Text("Mit FileBot umbenennen...")
+                            Text("Im Rename Studio umbenennen...")
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .padding(.horizontal, 8)
@@ -125,7 +125,7 @@ public struct QueueListView: View {
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.blue.opacity(0.35), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .help("Alle abgeschlossenen Dateien mit FileBot abgleichen und umbenennen")
+                    .help("Alle abgeschlossenen Dateien im Rename Studio abgleichen und umbenennen")
 
                     // Open Folder
                     Button(action: {

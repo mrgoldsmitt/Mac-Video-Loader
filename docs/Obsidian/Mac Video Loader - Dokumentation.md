@@ -8,7 +8,7 @@ tags:
   - app/macos
   - media/downloader
   - ai/gemini
-  - filebot
+  - renamer
   - plex
   - swiftui
 status: "active"
@@ -17,13 +17,13 @@ status: "active"
 # Mac Video Loader (MVL) – Entwickler- & Anwender-Dokumentation
 
 > [!INFO] Überblick
-> **Mac Video Loader (MVL)** ist eine native macOS-Anwendung in Swift und SwiftUI für macOS 13+ (Ventura, Sonoma, Sequoia). Sie vereint den Ausfall-gesicherten Download von Videos und Tonspuren aus öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, etc.), YouTube und beliebigen Webseiten mit einem intelligenten **FileBot Rename Studio** und nativer **Google Gemini KI-Unterstützung**.
+> **Mac Video Loader (MVL)** ist eine native macOS-Anwendung in Swift und SwiftUI für macOS 13+ (Ventura, Sonoma, Sequoia). Sie vereint den Ausfall-gesicherten Download von Videos und Tonspuren aus öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, etc.), YouTube und beliebigen Webseiten mit einem intelligenten **Rename Studio** und nativer **Google Gemini KI-Unterstützung**.
 
 ---
 
 ## Inhaltsverzeichnis
 - [[#1. Architektur & Kernmodule]]
-- [[#2. FileBot Rename Studio]]
+- [[#2. Rename Studio]]
 - [[#3. Google Gemini KI-Integration]]
 - [[#4. Downloads & Mediatheken]]
 - [[#5. Datenschutz & Sicherheit]]
@@ -36,16 +36,16 @@ status: "active"
 ```mermaid
 graph TD
     UI[SwiftUI Interface] --> DM[DownloadManager]
-    UI --> RS[FileBotRenameSheet]
+    UI --> RS[RenameStudioSheet]
     DM --> YTS[YTDlpService]
     DM --> NPS[QueuePersistenceService]
     DM --> NMS[NetworkMonitorService]
     DM --> SPS[SleepPreventionService]
-    RS --> FBS[FileBotService]
+    RS --> RNS[RenameService]
     RS --> GS[GeminiService]
     GS --> KS[KeychainService]
     GS --> GAPI[Google Gemini REST API]
-    FBS --> FCLI[FileBot CLI / Fallback Heuristik]
+    RNS --> CLI[Lokale CLI / Fallback Heuristik]
 ```
 
 ### Komponenten-Übersicht
@@ -53,20 +53,20 @@ graph TD
 | Modul | Datei | Aufgabe |
 | :--- | :--- | :--- |
 | `DownloadManager` | `Services/DownloadManager.swift` | Zentrale Steuerung der Warteschlange, Multi-Threading, Persistenz & Playlist-Inspektion. |
-| `FileBotService` | `Services/FileBotService.swift` | Anbindung von FileBot CLI, rekursive Ordnerscans & lokale Heuristik für Serien/Dateien. |
+| `RenameService` | `Services/RenameService.swift` | Anbindung optionaler CLI, rekursive Ordnerscans & lokale Heuristik für Serien/Dateien. |
 | `GeminiService` | `Services/GeminiService.swift` | REST-Client für Google Gemini 2.5 Flash / Pro mit strukturiertem JSON-Output. |
 | `KeychainService` | `Services/KeychainService.swift` | Sichere Speicherung sensibler Tokens im macOS-Schlüsselbund. |
 | `YTDlpService` | `Services/YTDlpService.swift` | Subprozess-Wrapper für `yt-dlp` und `ffmpeg` mit Watchdog-Schutz. |
-| `FileBotRenameSheet` | `Views/FileBotRenameSheet.swift` | Dual-Pane Vorschauoberfläche mit Echtzeit-Filtern, Tokens und KI-Prompt. |
+| `RenameStudioSheet` | `Views/RenameStudioSheet.swift` | Dual-Pane Vorschauoberfläche mit Fortschrittsbalken, Echtzeit-Filtern, Tokens und KI-Prompt. |
 
 ---
 
-## 2. FileBot Rename Studio
+## 2. Rename Studio
 
 Das **Rename Studio** kann wahlweise direkt im Anschluss an einen Download oder als eigenständiges Werkzeug für bestehende Ordner geöffnet werden.
 
 > [!TIP] Ordner-Auswahl & Rekursives Scannen
-> Über die Top-Navigation (`Dateien umbenennen...`) oder per Drag & Drop eines Finders-Ordners wird der Ordner rekursiv inklusive aller Unterordner durchsucht (`FileBotService.scanFolderRecursively`).
+> Über die Top-Navigation (`Dateien umbenennen...`) oder per Drag & Drop eines Finders-Ordners wird der Ordner rekursiv inklusive aller Unterordner durchsucht (`RenameService.scanFolderRecursively`).
 
 ### Die drei Verarbeitungsmodi
 

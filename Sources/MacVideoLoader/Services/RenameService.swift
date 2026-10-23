@@ -1,8 +1,8 @@
 import Foundation
 import AppKit
 
-public final class FileBotService: @unchecked Sendable {
-    public static let shared = FileBotService()
+public final class RenameService: @unchecked Sendable {
+    public static let shared = RenameService()
 
     private let lock = NSLock()
 
@@ -21,9 +21,9 @@ public final class FileBotService: @unchecked Sendable {
 
     // MARK: - Folder Scanning (Recursive)
 
-    public func scanFolderRecursively(folderURL: URL) -> [FileBotRenameItem] {
+    public func scanFolderRecursively(folderURL: URL) -> [RenameItem] {
         let fileManager = FileManager.default
-        var results: [FileBotRenameItem] = []
+        var results: [RenameItem] = []
 
         guard let enumerator = fileManager.enumerator(
             at: folderURL,
@@ -47,7 +47,7 @@ public final class FileBotService: @unchecked Sendable {
                         relPath = String(filePath.dropFirst(basePath.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                     }
 
-                    let item = FileBotRenameItem(
+                    let item = RenameItem(
                         downloadItemId: nil,
                         originalURL: fileURL,
                         originalName: fileURL.lastPathComponent,
@@ -72,23 +72,27 @@ public final class FileBotService: @unchecked Sendable {
     // MARK: - Matching / Vorschau
 
     public func matchFiles(
-        items: [FileBotRenameItem],
-        mode: FileBotProcessingMode,
-        database: FileBotDatabase,
-        language: FileBotLanguage,
+        items: [RenameItem],
+        mode: RenameProcessingMode,
+        database: RenameDatabase,
+        language: RenameLanguage,
         format: String,
         seriesQuery: String?,
         outputFolder: URL,
-        customInstruction: String? = nil
+        customInstruction: String? = nil,
+        onProgress: (@Sendable (Double, String) -> Void)? = nil
     ) async throws {
+        onProgress?(0.1, "Initialisiere Abgleich...")
+
         // 0. If Gemini AI is selected
         if database == .gemini {
             let apiKey = AppSettings.shared.getGeminiApiKey()
             if apiKey.isEmpty {
-                throw NSError(domain: "FileBotService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Kein Google Gemini API-Key hinterlegt. Bitte trage deinen API-Key in den Einstellungen ein."])
+                throw NSError(domain: "RenameService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Kein Google Gemini API-Key hinterlegt. Bitte trage deinen API-Key in den Einstellungen ein."])
             }
 
             let model = AppSettings.shared.geminiModel
+            onProgress?(0.3, "Sende Anfrage an Google Gemini (\(model))...")
 
             if mode == .custom {
                 let proposals = try await GeminiService.shared.analyzeCustomFiles(
@@ -97,6 +101,8 @@ public final class FileBotService: @unchecked Sendable {
                     model: model,
                     customInstruction: customInstruction ?? ""
                 )
+
+                onProgress?(0.8, "Verarbeite KI-Rückmeldungen...")
 
                 for item in items {
                     if let prop = proposals.first(where: { $0.originalName == item.originalName }) {
@@ -114,6 +120,7 @@ public final class FileBotService: @unchecked Sendable {
                         }
                     }
                 }
+                onProgress?(1.0, "Abgleich erfolgreich abgeschlossen!")
                 return
             } else {
                 let seasonFolder = AppSettings.shared.geminiPlexSeasonFolder
@@ -127,6 +134,8 @@ public final class FileBotService: @unchecked Sendable {
                     includeYear: includeYear,
                     userPromptHint: customInstruction
                 )
+
+                onProgress?(0.8, "Wende Plex-Vorschläge an...")
 
                 // Map proposals back to items
                 for item in items {
@@ -176,22 +185,26 @@ public final class FileBotService: @unchecked Sendable {
                         }
                     }
                 }
+                onProgress?(1.0, "Abgleich erfolgreich abgeschlossen!")
                 return
             }
         }
 
         // 1. If mode is custom (Dateien & Markup), apply custom token replacement
         if mode == .custom {
+            onProgress?(0.5, "Wende Markup-Tokens auf \(items.count) Dateien an...")
             applyCustomMarkup(items: items, format: format, outputFolder: outputFolder)
+            onProgress?(1.0, "Markup erfolgreich angewendet!")
             return
         }
 
         let filebotPath = SystemService.shared.findFilebot(customPath: AppSettings.shared.customFilebotPath)
 
-        // 2. If FileBot is installed, attempt matching via FileBot CLI
+        // 2. If CLI tool is installed, attempt matching via CLI
         if let binary = filebotPath {
             do {
-                try await matchWithFileBotCLI(
+                onProgress?(0.4, "Führe Abgleich via Rename-CLI (\(database.rawValue)) durch...")
+                try await matchWithCLI(
                     binary: binary,
                     items: items,
                     mode: mode,
@@ -201,28 +214,30 @@ public final class FileBotService: @unchecked Sendable {
                     seriesQuery: seriesQuery,
                     outputFolder: outputFolder
                 )
+                onProgress?(1.0, "Erfolgreich via Rename-CLI abgeglichen!")
                 return
             } catch {
-                print("FileBot CLI Fehler, weiche auf lokale Serien-Heuristik aus: \(error.localizedDescription)")
+                print("Rename CLI Fehler, weiche auf lokale Heuristik aus: \(error.localizedDescription)")
             }
         }
 
         // 3. Fallback to smart local season/series pattern matching
+        onProgress?(0.6, "Analysiere Dateimuster mit lokaler Heuristik...")
         matchLocally(items: items, mode: mode, format: format, seriesQuery: seriesQuery, outputFolder: outputFolder)
+        onProgress?(1.0, "Muster-Abgleich abgeschlossen!")
     }
 
-    private func matchWithFileBotCLI(
+    private func matchWithCLI(
         binary: String,
-        items: [FileBotRenameItem],
-        mode: FileBotProcessingMode,
-        database: FileBotDatabase,
-        language: FileBotLanguage,
+        items: [RenameItem],
+        mode: RenameProcessingMode,
+        database: RenameDatabase,
+        language: RenameLanguage,
         format: String,
         seriesQuery: String?,
         outputFolder: URL
     ) async throws {
-        // Collect existing file paths
-        let existingFiles = items.compactMap { item -> (FileBotRenameItem, String)? in
+        let existingFiles = items.compactMap { item -> (RenameItem, String)? in
             let path = item.originalURL.path
             return FileManager.default.fileExists(atPath: path) ? (item, path) : nil
         }
@@ -232,10 +247,7 @@ public final class FileBotService: @unchecked Sendable {
             return
         }
 
-        var arguments = [
-            "-rename"
-        ]
-
+        var arguments = ["-rename"]
         for (_, path) in existingFiles {
             arguments.append(path)
         }
@@ -265,19 +277,16 @@ public final class FileBotService: @unchecked Sendable {
                     item.proposedName = newURL.lastPathComponent
                     item.proposedRelativePath = relative
                     item.isMatched = true
-                    item.statusMessage = "Erkannt via FileBot (\(database.rawValue))"
+                    item.statusMessage = "Erkannt via CLI (\(database.rawValue))"
                     item.isError = false
                 }
             } else {
-                // If FileBot didn't match this particular file, apply local heuristic
                 applyLocalMatch(item: item, index: idx + 1, mode: mode, format: format, seriesQuery: seriesQuery, explicitSeason: nil, outputFolder: outputFolder)
             }
         }
     }
 
     private func parseTestOutput(_ output: String) -> [String: String] {
-        // Look for lines like:
-        // [TEST] from [/path/old.mp4] to [/path/new.mp4]
         var matches: [String: String] = [:]
         let lines = output.components(separatedBy: .newlines)
 
@@ -304,8 +313,8 @@ public final class FileBotService: @unchecked Sendable {
     // MARK: - Smart Local Heuristics Fallback
 
     public func matchLocally(
-        items: [FileBotRenameItem],
-        mode: FileBotProcessingMode,
+        items: [RenameItem],
+        mode: RenameProcessingMode,
         format: String,
         seriesQuery: String?,
         outputFolder: URL
@@ -315,7 +324,6 @@ public final class FileBotService: @unchecked Sendable {
             return
         }
 
-        // Check if seriesQuery specifies an explicit season (e.g., "Staffel 2" or "Season 3")
         var explicitSeason: Int? = nil
         if let query = seriesQuery {
             if let match = query.range(of: #"(?:Staffel|Season)\s*(\d{1,2})"#, options: [.regularExpression, .caseInsensitive]) {
@@ -340,7 +348,7 @@ public final class FileBotService: @unchecked Sendable {
     }
 
     public func applyCustomMarkup(
-        items: [FileBotRenameItem],
+        items: [RenameItem],
         format: String,
         outputFolder: URL
     ) {
@@ -358,17 +366,14 @@ public final class FileBotService: @unchecked Sendable {
             let originalFile = item.originalURL.deletingPathExtension().lastPathComponent
             let ext = item.originalURL.pathExtension
 
-            // Parent folder name
             let parentFolder = item.originalURL.deletingLastPathComponent().lastPathComponent
 
-            // Dates
             let fileDate = item.creationDate ?? item.modificationDate ?? Date()
             let dateStr = dateFormatter.string(from: fileDate)
             let yearStr = yearFormatter.string(from: fileDate)
             let monthStr = monthFormatter.string(from: fileDate)
             let dayStr = dayFormatter.string(from: fileDate)
 
-            // Clean name
             var clean = originalFile
                 .replacingOccurrences(of: ".", with: " ")
                 .replacingOccurrences(of: "_", with: " ")
@@ -419,9 +424,9 @@ public final class FileBotService: @unchecked Sendable {
     }
 
     private func applyLocalMatch(
-        item: FileBotRenameItem,
+        item: RenameItem,
         index: Int,
-        mode: FileBotProcessingMode,
+        mode: RenameProcessingMode,
         format: String,
         seriesQuery: String?,
         explicitSeason: Int?,
@@ -435,7 +440,6 @@ public final class FileBotService: @unchecked Sendable {
             ?? extractSeriesTitle(from: baseName)
             ?? "Serie"
 
-        // Also check if immediate parent folder indicates a season (e.g. "Staffel 02" or "Season 1")
         let parentFolder = item.originalURL.deletingLastPathComponent().lastPathComponent
         var folderSeason: Int? = nil
         if let match = parentFolder.range(of: #"(?:Staffel|Season)\s*(\d{1,2})"#, options: [.regularExpression, .caseInsensitive]) {
@@ -468,7 +472,6 @@ public final class FileBotService: @unchecked Sendable {
             formattedString = formattedString.replacingOccurrences(of: "{t}", with: cleanTitle)
         }
 
-        // Clean extra spaces / empty parentheses
         formattedString = formattedString.replacingOccurrences(of: " ()", with: "")
         formattedString = formattedString.trimmingCharacters(in: .whitespaces)
 
@@ -564,7 +567,6 @@ public final class FileBotService: @unchecked Sendable {
     }
 
     private func extractSeriesTitle(from name: String) -> String? {
-        // If format is "Series - S01E01 - Title"
         let separators = [" - ", " – ", " | "]
         for sep in separators {
             if name.contains(sep) {
@@ -597,18 +599,22 @@ public final class FileBotService: @unchecked Sendable {
         return fullURL.lastPathComponent
     }
 
-    // MARK: - Umbenennung Ausführen
+    // MARK: - Umbenennung Ausführen (mit Fortschritts-Callback)
 
     public func performRename(
-        items: [FileBotRenameItem],
+        items: [RenameItem],
+        onProgress: (@Sendable (Int, Int, Double, String) -> Void)? = nil,
         onItemRenamed: (@Sendable (UUID, URL, String) -> Void)? = nil
     ) async throws -> Int {
         var successCount = 0
+        let selectedItems = items.filter(\.isSelected)
+        let totalCount = selectedItems.count
 
-        for item in items {
-            guard item.isSelected else { continue }
-
+        for (idx, item) in selectedItems.enumerated() {
             let original = item.originalURL
+            let fraction = Double(idx) / Double(max(1, totalCount))
+            onProgress?(idx, totalCount, fraction, item.originalName)
+
             guard FileManager.default.fileExists(atPath: original.path) else {
                 await MainActor.run {
                     item.isError = true
@@ -619,7 +625,6 @@ public final class FileBotService: @unchecked Sendable {
 
             let destination = item.proposedDestinationURL
 
-            // If already matching
             if original.path == destination.path {
                 await MainActor.run {
                     item.isRenamed = true
@@ -651,8 +656,12 @@ public final class FileBotService: @unchecked Sendable {
                     item.statusMessage = "Fehler: \(error.localizedDescription)"
                 }
             }
+
+            let updatedFraction = Double(idx + 1) / Double(max(1, totalCount))
+            onProgress?(idx + 1, totalCount, updatedFraction, item.proposedName)
         }
 
+        onProgress?(totalCount, totalCount, 1.0, "Fertig")
         return successCount
     }
 
@@ -688,7 +697,6 @@ public final class FileBotService: @unchecked Sendable {
                     let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
                     let errString = String(data: errData, encoding: .utf8) ?? ""
 
-                    // Note: FileBot exit code may be 1 or 0 for --action test
                     let fullOutput = outString + "\n" + errString
                     continuation.resume(returning: fullOutput)
                 } catch {
@@ -726,3 +734,6 @@ public final class FileBotService: @unchecked Sendable {
         }
     }
 }
+
+// Backward compatibility alias
+public typealias FileBotService = RenameService

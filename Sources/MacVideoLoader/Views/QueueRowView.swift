@@ -223,9 +223,9 @@ public struct QueueRowView: View {
                     .help("Diesen Download überspringen")
                 }
 
-                // FileBot Rename button when completed
+                // Rename Studio button when completed
                 if case .completed = item.status {
-                    Button(action: { downloadManager.openFileBotRenamer(items: [item]) }) {
+                    Button(action: { downloadManager.openRenameStudio(items: [item]) }) {
                         Image(systemName: "pencil.and.list.clipboard")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.blue)
@@ -234,7 +234,7 @@ public struct QueueRowView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .help("Mit FileBot umbenennen...")
+                    .help("Im Rename Studio umbenennen...")
 
                     Button(action: { downloadManager.revealInFinder(item: item) }) {
                         Image(systemName: "folder.fill")
@@ -312,8 +312,8 @@ public struct QueueRowView: View {
             }
 
             if case .completed = item.status {
-                Button("Mit FileBot umbenennen...") {
-                    downloadManager.openFileBotRenamer(items: [item])
+                Button("Im Rename Studio umbenennen...") {
+                    downloadManager.openRenameStudio(items: [item])
                 }
             }
 

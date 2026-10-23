@@ -22,10 +22,24 @@ public class DownloadManager: ObservableObject {
     // Multi-selection state
     @Published public var selectedItemIds: Set<UUID> = []
 
-    // FileBot Post-Download Prompt & Sheet State
-    @Published public var promptToRenameItem: DownloadItem? = nil
-    @Published public var fileBotRenameItems: [DownloadItem]? = nil
-    @Published public var fileBotStandaloneFolder: URL? = nil
+    // Rename Studio Post-Download Prompt & Sheet State
+    @Published public var renamePromptItem: DownloadItem? = nil
+    @Published public var renameStudioItems: [DownloadItem]? = nil
+    @Published public var renameStudioFolder: URL? = nil
+
+    // Backward compatibility aliases
+    public var promptToRenameItem: DownloadItem? {
+        get { renamePromptItem }
+        set { renamePromptItem = newValue }
+    }
+    public var fileBotRenameItems: [DownloadItem]? {
+        get { renameStudioItems }
+        set { renameStudioItems = newValue }
+    }
+    public var fileBotStandaloneFolder: URL? {
+        get { renameStudioFolder }
+        set { renameStudioFolder = newValue }
+    }
 
     private let settings = AppSettings.shared
     private let service = YTDlpService.shared
@@ -358,7 +372,7 @@ public class DownloadManager: ObservableObject {
                 self.processQueue()
 
                 if self.settings.askToRenameAfterDownload {
-                    self.promptToRenameItem = item
+                    self.renamePromptItem = item
                 }
             } catch {
                 self.cancelWatchdog(for: itemId)
@@ -527,17 +541,26 @@ public class DownloadManager: ObservableObject {
         processQueue()
     }
 
-    // MARK: - FileBot Renaming Integration
+    // MARK: - Rename Studio Integration
 
-    public func openFileBotRenamer(items: [DownloadItem]) {
+    public func openRenameStudio(items: [DownloadItem]) {
         guard !items.isEmpty else { return }
-        self.fileBotStandaloneFolder = nil
-        self.fileBotRenameItems = items
+        self.renameStudioFolder = nil
+        self.renameStudioItems = items
+    }
+
+    public func openRenameStudioForFolder(_ folderURL: URL) {
+        self.renameStudioItems = nil
+        self.renameStudioFolder = folderURL
+    }
+
+    // Backward compatibility aliases
+    public func openFileBotRenamer(items: [DownloadItem]) {
+        openRenameStudio(items: items)
     }
 
     public func openFileBotRenamerForFolder(_ folderURL: URL) {
-        self.fileBotRenameItems = nil
-        self.fileBotStandaloneFolder = folderURL
+        openRenameStudioForFolder(folderURL)
     }
 
     public func updateItemAfterRename(itemId: UUID, newURL: URL, newTitle: String) {

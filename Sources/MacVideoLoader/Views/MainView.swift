@@ -56,8 +56,8 @@ public struct MainView: View {
                 .background(Color.red.opacity(0.18))
             }
 
-            // FileBot Post-Download Prompt Banner
-            if let promptItem = downloadManager.promptToRenameItem {
+            // Rename Studio Post-Download Prompt Banner
+            if let promptItem = downloadManager.renamePromptItem {
                 postDownloadRenameBanner(for: promptItem)
             }
 
@@ -77,13 +77,13 @@ public struct MainView: View {
             PlaylistSelectionSheet(playlist: playlist, downloadManager: downloadManager)
         }
         .sheet(isPresented: Binding(
-            get: { downloadManager.fileBotRenameItems != nil || downloadManager.fileBotStandaloneFolder != nil },
-            set: { if !$0 { downloadManager.fileBotRenameItems = nil; downloadManager.fileBotStandaloneFolder = nil } }
+            get: { downloadManager.renameStudioItems != nil || downloadManager.renameStudioFolder != nil },
+            set: { if !$0 { downloadManager.renameStudioItems = nil; downloadManager.renameStudioFolder = nil } }
         )) {
-            FileBotRenameSheet(
+            RenameStudioSheet(
                 downloadManager: downloadManager,
-                items: downloadManager.fileBotRenameItems,
-                standaloneFolder: downloadManager.fileBotStandaloneFolder
+                items: downloadManager.renameStudioItems,
+                standaloneFolder: downloadManager.renameStudioFolder
             )
         }
         .onDrop(of: ["public.file-url", "public.utf8-plain-text", "public.url"], isTargeted: $isDropTargeted) { providers in
@@ -134,7 +134,7 @@ public struct MainView: View {
 
             Spacer()
 
-            // Standalone FileBot Rename Tool Button
+            // Standalone Rename Studio Button
             Button(action: openStandaloneFolderPicker) {
                 HStack(spacing: 5) {
                     Image(systemName: "pencil.and.list.clipboard")
@@ -382,14 +382,14 @@ public struct MainView: View {
                     .buttonStyle(.plain)
                     .help("Ausgewählte Einträge als .mvl Datei speichern")
 
-                    // FileBot Rename Button for selected items
+                    // Rename Button for selected items
                     let selectedCompleted = downloadManager.queue.filter { downloadManager.selectedItemIds.contains($0.id) && $0.status.isCompleted }
                     if !selectedCompleted.isEmpty {
-                        Button(action: { downloadManager.openFileBotRenamer(items: selectedCompleted) }) {
+                        Button(action: { downloadManager.openRenameStudio(items: selectedCompleted) }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "pencil.and.list.clipboard")
                                     .font(.system(size: 10, weight: .bold))
-                                Text("FileBot (\(selectedCompleted.count))...")
+                                Text("Umbenennen (\(selectedCompleted.count))...")
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .padding(.horizontal, 8)
@@ -400,7 +400,7 @@ public struct MainView: View {
                             .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue.opacity(0.4), lineWidth: 1))
                         }
                         .buttonStyle(.plain)
-                        .help("Ausgewählte fertige Downloads mit FileBot umbenennen")
+                        .help("Ausgewählte fertige Downloads im Rename Studio umbenennen")
                     }
 
                     // Entfernen
@@ -496,14 +496,14 @@ public struct MainView: View {
                         .help("Downloads als wiederverwendbare .mvl Datei sichern")
                     }
 
-                    // FileBot Button if any completed items exist
+                    // Rename Studio Button if any completed items exist
                     let completedItems = downloadManager.queue.filter { $0.status.isCompleted }
                     if !completedItems.isEmpty {
-                        Button(action: { downloadManager.openFileBotRenamer(items: completedItems) }) {
+                        Button(action: { downloadManager.openRenameStudio(items: completedItems) }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "pencil.and.list.clipboard")
                                     .font(.system(size: 10, weight: .bold))
-                                Text("FileBot (\(completedItems.count))")
+                                Text("Rename Studio (\(completedItems.count))")
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .padding(.horizontal, 7)
@@ -514,7 +514,7 @@ public struct MainView: View {
                             .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue.opacity(0.35), lineWidth: 1))
                         }
                         .buttonStyle(.plain)
-                        .help("Fertige Downloads mit FileBot in Serien- oder Staffelstruktur umbenennen")
+                        .help("Fertige Downloads im Rename Studio in Serien- oder Staffelstruktur umbenennen")
                     }
 
                     // Pause / Resume All (Requirement 2)
@@ -608,7 +608,7 @@ public struct MainView: View {
         )
     }
 
-    // MARK: - Post-Download FileBot Rename Banner
+    // MARK: - Post-Download Rename Studio Banner
     private func postDownloadRenameBanner(for item: DownloadItem) -> some View {
         HStack(spacing: 12) {
             ZStack {
@@ -633,7 +633,7 @@ public struct MainView: View {
                         .lineLimit(1)
                 }
 
-                Text("Möchtest du diese Datei jetzt mit FileBot in Serien- oder Staffelstruktur umbenennen?")
+                Text("Möchtest du diese Datei jetzt im Rename Studio in Serien- oder Staffelstruktur umbenennen?")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -642,8 +642,8 @@ public struct MainView: View {
 
             HStack(spacing: 8) {
                 Button(action: {
-                    downloadManager.promptToRenameItem = nil
-                    downloadManager.openFileBotRenamer(items: [item])
+                    downloadManager.renamePromptItem = nil
+                    downloadManager.openRenameStudio(items: [item])
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.right.circle.fill")
@@ -660,7 +660,7 @@ public struct MainView: View {
 
                 Button("Später") {
                     withAnimation {
-                        downloadManager.promptToRenameItem = nil
+                        downloadManager.renamePromptItem = nil
                     }
                 }
                 .buttonStyle(.plain)
@@ -670,7 +670,7 @@ public struct MainView: View {
                 Button(action: {
                     settings.askToRenameAfterDownload = false
                     withAnimation {
-                        downloadManager.promptToRenameItem = nil
+                        downloadManager.renamePromptItem = nil
                     }
                 }) {
                     Image(systemName: "xmark")
@@ -712,7 +712,7 @@ public struct MainView: View {
                         var isDir: ObjCBool = false
                         if FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDir), isDir.boolValue {
                             DispatchQueue.main.async {
-                                downloadManager.openFileBotRenamerForFolder(fileURL)
+                                downloadManager.openRenameStudioForFolder(fileURL)
                             }
                             return
                         }
@@ -750,7 +750,7 @@ public struct MainView: View {
         panel.prompt = "Ordner öffnen"
         panel.message = "Wähle einen Ordner aus, um alle enthaltenen Dateien rekursiv umzubenennen."
         if panel.runModal() == .OK, let url = panel.url {
-            downloadManager.openFileBotRenamerForFolder(url)
+            downloadManager.openRenameStudioForFolder(url)
         }
     }
 }

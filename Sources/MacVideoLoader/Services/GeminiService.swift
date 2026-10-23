@@ -98,7 +98,7 @@ public final class GeminiService: @unchecked Sendable {
     // MARK: - Plex-optimierte KI-Umbenennung
 
     public func analyzeForPlex(
-        items: [FileBotRenameItem],
+        items: [RenameItem],
         apiKey: String,
         model: String = "gemini-2.5-flash",
         seasonPrefix: String = "Season",
@@ -248,7 +248,7 @@ public final class GeminiService: @unchecked Sendable {
     // MARK: - Beliebige Dateien & Markup / Filter KI-Umbenennung
 
     public func analyzeCustomFiles(
-        items: [FileBotRenameItem],
+        items: [RenameItem],
         apiKey: String,
         model: String = "gemini-2.5-flash",
         customInstruction: String

@@ -1,14 +1,14 @@
 import SwiftUI
 import AppKit
 
-public struct FileBotRenameSheet: View {
+public struct RenameStudioSheet: View {
     @ObservedObject var downloadManager: DownloadManager
     @StateObject private var settings = AppSettings.shared
 
-    @State private var renameItems: [FileBotRenameItem] = []
-    @State private var mode: FileBotProcessingMode = .series
-    @State private var database: FileBotDatabase = .themoviedb
-    @State private var language: FileBotLanguage = .german
+    @State private var renameItems: [RenameItem] = []
+    @State private var mode: RenameProcessingMode = .series
+    @State private var database: RenameDatabase = .themoviedb
+    @State private var language: RenameLanguage = .german
     @State private var formatExpression: String = "{n} - {s00e00} - {t}"
     @State private var seriesQuery: String = ""
     @State private var isMatching: Bool = false
@@ -17,6 +17,14 @@ public struct FileBotRenameSheet: View {
     @State private var renameCompletedCount: Int? = nil
     @State private var tempGeminiApiKey: String = ""
     @State private var showApiKeySection: Bool = false
+
+    // Progress bar states for analysis and renaming
+    @State private var matchingProgress: Double = 0.0
+    @State private var matchingStatus: String = ""
+    @State private var renameProgress: Double = 0.0
+    @State private var renameCurrentFile: String = ""
+    @State private var renamedCount: Int = 0
+    @State private var totalToRename: Int = 0
 
     // AI Prompt & Custom Markup/Filter Support
     @State private var aiPromptText: String = ""
@@ -27,7 +35,7 @@ public struct FileBotRenameSheet: View {
     @State private var isDropTargeted: Bool = false
 
     private let sourceItems: [DownloadItem]?
-    private let service = FileBotService.shared
+    private let service = RenameService.shared
 
     public init(
         downloadManager: DownloadManager,
@@ -46,7 +54,7 @@ public struct FileBotRenameSheet: View {
         return (mode == .custom && useCustomGeminiAI) || (mode != .custom && database == .gemini)
     }
 
-    public var filteredItems: [FileBotRenameItem] {
+    public var filteredItems: [RenameItem] {
         renameItems.filter { item in
             let matchesCategory = categoryFilter.matches(url: item.originalURL)
             let matchesSearch = searchQuery.isEmpty ||
@@ -75,10 +83,20 @@ public struct FileBotRenameSheet: View {
             // Category & Search Filter Strip
             filterAndSelectionStrip
 
+            // Progress Bar for Analysis / Abgleich
+            if isMatching {
+                analysisProgressBar
+            }
+
+            // Progress Bar for Rename Execution
+            if isRenaming {
+                renamingProgressBar
+            }
+
             Divider()
                 .background(Color.white.opacity(0.1))
 
-            // Dual-Pane FileBot Table
+            // Dual-Pane Comparison Table
             dualPaneComparisonView
 
             Divider()
@@ -119,7 +137,7 @@ public struct FileBotRenameSheet: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text("FileBot Rename Studio")
+                    Text("Rename Studio")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.white)
 
@@ -136,13 +154,13 @@ public struct FileBotRenameSheet: View {
                             .font(.system(size: 9, weight: .semibold))
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(Color.orange.opacity(0.2))
-                            .foregroundColor(.orange)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
                             .cornerRadius(4)
                     }
                 }
 
-                Text("Serien, Filme & beliebige Dateien rekursiv nach Schema oder KI umbenennen")
+                Text("Serien, Filme & beliebige Dateien rekursiv nach Schema oder Google Gemini KI umbenennen")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
@@ -180,8 +198,8 @@ public struct FileBotRenameSheet: View {
             .help("Anderen Ordner auswählen & rekursiv einlesen (inkl. aller Unterordner)")
 
             Button(action: {
-                downloadManager.fileBotRenameItems = nil
-                downloadManager.fileBotStandaloneFolder = nil
+                downloadManager.renameStudioItems = nil
+                downloadManager.renameStudioFolder = nil
             }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))
@@ -206,7 +224,7 @@ public struct FileBotRenameSheet: View {
                         .foregroundColor(.secondary)
 
                     Picker("", selection: $mode) {
-                        ForEach(FileBotProcessingMode.allCases) { m in
+                        ForEach(RenameProcessingMode.allCases) { m in
                             Label(m.displayName, systemImage: m.icon).tag(m)
                         }
                     }
@@ -300,7 +318,7 @@ public struct FileBotRenameSheet: View {
                             .foregroundColor(.secondary)
 
                         Picker("", selection: $database) {
-                            ForEach(FileBotDatabase.allCases) { db in
+                            ForEach(RenameDatabase.allCases) { db in
                                 Text(db.displayName).tag(db)
                             }
                         }
@@ -334,7 +352,7 @@ public struct FileBotRenameSheet: View {
                                 .foregroundColor(.secondary)
 
                             Picker("", selection: $language) {
-                                ForEach(FileBotLanguage.allCases) { lang in
+                                ForEach(RenameLanguage.allCases) { lang in
                                     Text(lang.displayName).tag(lang)
                                 }
                             }
@@ -447,19 +465,19 @@ public struct FileBotRenameSheet: View {
                 Menu {
                     Text("Muster-Vorlagen:")
                     if mode == .series {
-                        ForEach(FileBotFormatPreset.seriesPresets) { preset in
+                        ForEach(RenameFormatPreset.seriesPresets) { preset in
                             Button("\(preset.name) (\(preset.format))") {
                                 formatExpression = preset.format
                             }
                         }
                     } else if mode == .season {
-                        ForEach(FileBotFormatPreset.seasonPresets) { preset in
+                        ForEach(RenameFormatPreset.seasonPresets) { preset in
                             Button("\(preset.name) (\(preset.format))") {
                                 formatExpression = preset.format
                             }
                         }
                     } else {
-                        ForEach(FileBotFormatPreset.customPresets) { preset in
+                        ForEach(RenameFormatPreset.customPresets) { preset in
                             Button("\(preset.name) (\(preset.format))") {
                                 formatExpression = preset.format
                             }
@@ -495,7 +513,7 @@ public struct FileBotRenameSheet: View {
                     .tint(.purple)
                 }
 
-                // Prominent Match Button (THE ONLY TRIGGER)
+                // Prominent Match Button (THE TRIGGER)
                 Button(action: triggerMatch) {
                     HStack(spacing: 6) {
                         if isMatching {
@@ -558,6 +576,86 @@ public struct FileBotRenameSheet: View {
         }
         .buttonStyle(.plain)
         .help(tooltip)
+    }
+
+    // MARK: - Analysis Progress Bar Strip
+    private var analysisProgressBar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                if isGeminiActive {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.purple)
+                        .font(.system(size: 11, weight: .bold))
+                } else {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.blue)
+                        .font(.system(size: 11, weight: .bold))
+                }
+
+                Text(matchingStatus.isEmpty ? "Analysiere Dateinamen..." : matchingStatus)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(isGeminiActive ? .purple : .blue)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Text("\(Int(matchingProgress * 100))%")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(isGeminiActive ? .purple : .blue)
+            }
+
+            ProgressView(value: matchingProgress, total: 1.0)
+                .progressViewStyle(.linear)
+                .tint(isGeminiActive ? .purple : .blue)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(isGeminiActive ? Color.purple.opacity(0.12) : Color.blue.opacity(0.10))
+        .overlay(Rectangle().frame(height: 1).foregroundColor(isGeminiActive ? Color.purple.opacity(0.3) : Color.blue.opacity(0.3)), alignment: .bottom)
+        .transition(.opacity)
+    }
+
+    // MARK: - Renaming Progress Bar Strip
+    private var renamingProgressBar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .scaleEffect(0.6)
+                    .frame(width: 14, height: 14)
+
+                Text("\(renamedCount) von \(totalToRename) Dateien umbenannt...")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.green)
+
+                Spacer()
+
+                Text("\(Int(renameProgress * 100))%")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(.green)
+            }
+
+            ProgressView(value: renameProgress, total: 1.0)
+                .progressViewStyle(.linear)
+                .tint(.green)
+
+            if !renameCurrentFile.isEmpty {
+                HStack(spacing: 4) {
+                    Text("Verarbeite:")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text(renameCurrentFile)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.85))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.green.opacity(0.12))
+        .overlay(Rectangle().frame(height: 1).foregroundColor(Color.green.opacity(0.3)), alignment: .bottom)
+        .transition(.opacity)
     }
 
     // MARK: - Filter & Selection Strip
@@ -711,7 +809,7 @@ public struct FileBotRenameSheet: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Dual-Pane Comparison View (FileBot Style)
+    // MARK: - Dual-Pane Comparison View
     private var dualPaneComparisonView: some View {
         VStack(spacing: 0) {
             // Column Headers
@@ -786,7 +884,7 @@ public struct FileBotRenameSheet: View {
                 ScrollView {
                     LazyVStack(spacing: 4) {
                         ForEach(filteredItems) { item in
-                            FileBotRowView(item: item)
+                            RenameRowView(item: item)
                         }
                     }
                     .padding(8)
@@ -829,8 +927,8 @@ public struct FileBotRenameSheet: View {
             .foregroundColor(.blue)
 
             Button("Abbrechen") {
-                downloadManager.fileBotRenameItems = nil
-                downloadManager.fileBotStandaloneFolder = nil
+                downloadManager.renameStudioItems = nil
+                downloadManager.renameStudioFolder = nil
             }
             .buttonStyle(.plain)
             .font(.system(size: 12))
@@ -844,7 +942,7 @@ public struct FileBotRenameSheet: View {
                 .font(.system(size: 12, weight: .bold))
             }
             .buttonStyle(.borderedProminent)
-            .tint(renameCompletedCount != nil ? .green : .red)
+            .tint(renameCompletedCount != nil ? .green : .blue)
             .disabled(selectedFilteredCount == 0 || isMatching || isRenaming)
         }
         .padding(.horizontal, 16)
@@ -877,12 +975,12 @@ public struct FileBotRenameSheet: View {
 
     private func initializeItems() {
         if let sources = sourceItems, !sources.isEmpty {
-            var items: [FileBotRenameItem] = []
+            var items: [RenameItem] = []
             var detectedSeries: String? = nil
 
             for src in sources {
                 let fileURL = src.completedFileURL ?? src.destinationFolder.appendingPathComponent(src.title)
-                let rItem = FileBotRenameItem(
+                let rItem = RenameItem(
                     downloadItemId: src.id,
                     originalURL: fileURL,
                     originalName: fileURL.lastPathComponent,
@@ -905,7 +1003,7 @@ public struct FileBotRenameSheet: View {
             }
             self.formatExpression = mode.defaultFormat
             self.statusText = "\(items.count) Dateien bereit. Passe Einstellungen oder KI-Prompt an und klicke auf 'Abgleichen'."
-        } else if let standalone = downloadManager.fileBotStandaloneFolder {
+        } else if let standalone = downloadManager.renameStudioFolder {
             loadFolder(standalone)
         } else {
             loadFolder(currentFolder)
@@ -915,9 +1013,11 @@ public struct FileBotRenameSheet: View {
     private func triggerMatch() {
         guard !renameItems.isEmpty else { return }
         isMatching = true
+        matchingProgress = 0.05
+        matchingStatus = isGeminiActive ? "Initialisiere Google Gemini KI..." : "Initialisiere Abgleich..."
 
         let currentMode = mode
-        let effectiveDb: FileBotDatabase = (currentMode == .custom && useCustomGeminiAI) ? .gemini : database
+        let effectiveDb: RenameDatabase = (currentMode == .custom && useCustomGeminiAI) ? .gemini : database
         let currentLang = language
         let currentFormat = formatExpression
         let currentQuery = seriesQuery
@@ -936,15 +1036,33 @@ public struct FileBotRenameSheet: View {
                     format: currentFormat,
                     seriesQuery: currentQuery,
                     outputFolder: currentOutput,
-                    customInstruction: currentInstruction
+                    customInstruction: currentInstruction,
+                    onProgress: { progress, status in
+                        Task { @MainActor in
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                self.matchingProgress = progress
+                                self.matchingStatus = status
+                            }
+                        }
+                    }
                 )
                 await MainActor.run {
-                    self.isMatching = false
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        self.matchingProgress = 1.0
+                        self.matchingStatus = "Abgleich erfolgreich abgeschlossen!"
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        withAnimation {
+                            self.isMatching = false
+                        }
+                    }
                     self.statusText = "Vorschau aktualisiert (\(renameItems.count) Dateien zugeordnet)."
                 }
             } catch {
                 await MainActor.run {
-                    self.isMatching = false
+                    withAnimation {
+                        self.isMatching = false
+                    }
                     self.statusText = "Fehler beim Abgleich: \(error.localizedDescription)"
                 }
             }
@@ -953,18 +1071,35 @@ public struct FileBotRenameSheet: View {
 
     private func executeRename() {
         if renameCompletedCount != nil {
-            downloadManager.fileBotRenameItems = nil
-            downloadManager.fileBotStandaloneFolder = nil
+            downloadManager.renameStudioItems = nil
+            downloadManager.renameStudioFolder = nil
             return
         }
 
+        let selected = renameItems.filter(\.isSelected)
+        guard !selected.isEmpty else { return }
+
         isRenaming = true
+        renameProgress = 0.0
+        renamedCount = 0
+        totalToRename = selected.count
+        renameCurrentFile = selected.first?.originalName ?? ""
         statusText = "Benenne Dateien um..."
 
         Task {
             do {
                 let success = try await service.performRename(
                     items: renameItems,
+                    onProgress: { currentIdx, total, fraction, currentName in
+                        Task { @MainActor in
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                self.renamedCount = currentIdx
+                                self.totalToRename = total
+                                self.renameProgress = fraction
+                                self.renameCurrentFile = currentName
+                            }
+                        }
+                    },
                     onItemRenamed: { downloadId, newURL, newTitle in
                         Task { @MainActor in
                             downloadManager.updateItemAfterRename(
@@ -977,13 +1112,23 @@ public struct FileBotRenameSheet: View {
                 )
 
                 await MainActor.run {
-                    self.isRenaming = false
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        self.renameProgress = 1.0
+                        self.renamedCount = totalToRename
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation {
+                            self.isRenaming = false
+                        }
+                    }
                     self.renameCompletedCount = success
                     self.statusText = "Erfolgreich \(success) Dateien umbenannt!"
                 }
             } catch {
                 await MainActor.run {
-                    self.isRenaming = false
+                    withAnimation {
+                        self.isRenaming = false
+                    }
                     self.statusText = "Fehler beim Umbenennen: \(error.localizedDescription)"
                 }
             }
@@ -1016,9 +1161,9 @@ public struct FileBotRenameSheet: View {
     }
 }
 
-// MARK: - Dedicated Observable Row View for FileBot
-private struct FileBotRowView: View {
-    @ObservedObject var item: FileBotRenameItem
+// MARK: - Dedicated Observable Row View for Rename Studio
+private struct RenameRowView: View {
+    @ObservedObject var item: RenameItem
 
     var body: some View {
         HStack(spacing: 0) {

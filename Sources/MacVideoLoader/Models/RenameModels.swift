@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public enum FileBotProcessingMode: String, CaseIterable, Identifiable, Codable {
+public enum RenameProcessingMode: String, CaseIterable, Identifiable, Codable {
     case series = "series"
     case season = "season"
     case custom = "custom"
@@ -53,7 +53,10 @@ public enum FileBotProcessingMode: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-public enum FileBotDatabase: String, CaseIterable, Identifiable, Codable {
+// Backward compatibility alias
+public typealias FileBotProcessingMode = RenameProcessingMode
+
+public enum RenameDatabase: String, CaseIterable, Identifiable, Codable {
     case themoviedb = "TheMovieDB::TV"
     case thetvdb = "TheTVDB"
     case anidb = "AniDB"
@@ -65,13 +68,16 @@ public enum FileBotDatabase: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .themoviedb: return "TheMovieDB (TMDb - Empfohlen)"
         case .thetvdb: return "TheTVDB (Serien-Archiv)"
-        case .anidb: return "AniDB (Anime-Datenbank)"
+        case .anidb: return "AniDB (Anime-Archiv)"
         case .gemini: return "✨ Google Gemini KI (Plex-Optimiert)"
         }
     }
 }
 
-public enum FileBotLanguage: String, CaseIterable, Identifiable, Codable {
+// Backward compatibility alias
+public typealias FileBotDatabase = RenameDatabase
+
+public enum RenameLanguage: String, CaseIterable, Identifiable, Codable {
     case german = "German"
     case english = "English"
 
@@ -85,36 +91,39 @@ public enum FileBotLanguage: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-public struct FileBotFormatPreset: Identifiable {
+// Backward compatibility alias
+public typealias FileBotLanguage = RenameLanguage
+
+public struct RenameFormatPreset: Identifiable {
     public let id: String
     public let name: String
     public let format: String
     public let example: String
-    public let mode: FileBotProcessingMode
+    public let mode: RenameProcessingMode
 
-    public static let seriesPresets: [FileBotFormatPreset] = [
-        FileBotFormatPreset(
+    public static let seriesPresets: [RenameFormatPreset] = [
+        RenameFormatPreset(
             id: "series-std",
             name: "Standard (S01E01)",
             format: "{n} - {s00e00} - {t}",
             example: "Breaking Bad - S01E01 - Der Einstieg.mp4",
             mode: .series
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "series-compact",
             name: "Kompakt (1x01)",
             format: "{n} - {s}x{e.pad(2)} - {t}",
             example: "Breaking Bad - 1x01 - Der Einstieg.mp4",
             mode: .series
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "series-minimal",
             name: "Nur Episode & Titel",
             format: "{s00e00} - {t}",
             example: "S01E01 - Der Einstieg.mp4",
             mode: .series
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "series-year",
             name: "Mit Veröffentlichungsjahr",
             format: "{n} ({y}) - {s00e00} - {t}",
@@ -123,22 +132,22 @@ public struct FileBotFormatPreset: Identifiable {
         )
     ]
 
-    public static let seasonPresets: [FileBotFormatPreset] = [
-        FileBotFormatPreset(
+    public static let seasonPresets: [RenameFormatPreset] = [
+        RenameFormatPreset(
             id: "season-folder-de",
             name: "Staffel-Ordner (Deutsch)",
             format: "{n}/Staffel {s.pad(2)}/{n} - {s00e00} - {t}",
             example: "Breaking Bad/Staffel 01/Breaking Bad - S01E01 - Der Einstieg.mp4",
             mode: .season
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "season-folder-en",
             name: "Season-Ordner (Englisch)",
             format: "{n}/Season {s.pad(2)}/{n} - {s00e00} - {t}",
             example: "Breaking Bad/Season 01/Breaking Bad - S01E01 - Der Einstieg.mp4",
             mode: .season
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "season-name-inline",
             name: "Staffel im Dateinamen",
             format: "{n} - Staffel {s} - Folge {e.pad(2)} - {t}",
@@ -147,43 +156,43 @@ public struct FileBotFormatPreset: Identifiable {
         )
     ]
 
-    public static let customPresets: [FileBotFormatPreset] = [
-        FileBotFormatPreset(
+    public static let customPresets: [RenameFormatPreset] = [
+        RenameFormatPreset(
             id: "custom-folder-index-orig",
             name: "Ordner - Index - Original",
             format: "{folder} - {index.pad(2)} - {original}",
             example: "Urlaub 2024 - 01 - IMG_0042.jpg",
             mode: .custom
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "custom-date-orig",
             name: "Datum - Original",
             format: "{date} - {original}",
             example: "2024-05-18 - Rechnung.pdf",
             mode: .custom
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "custom-clean",
             name: "Bereinigt (Ohne Punkte/Unterstriche)",
             format: "{clean}",
             example: "Mein.Neuer.Film.1080p -> Mein Neuer Film",
             mode: .custom
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "custom-date-folder-index",
             name: "Datum_Ordner_Index",
             format: "{date}_{folder}_{index.pad(3)}",
             example: "2024-05-18_Fotos_001.jpg",
             mode: .custom
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "custom-index-original",
             name: "Index - Original",
             format: "{index.pad(2)} - {original}",
             example: "01 - Track 1.mp3",
             mode: .custom
         ),
-        FileBotFormatPreset(
+        RenameFormatPreset(
             id: "custom-lower",
             name: "Kleinbuchstaben",
             format: "{lower}",
@@ -192,6 +201,9 @@ public struct FileBotFormatPreset: Identifiable {
         )
     ]
 }
+
+// Backward compatibility alias
+public typealias FileBotFormatPreset = RenameFormatPreset
 
 public enum FileCategoryFilter: String, CaseIterable, Identifiable {
     case all = "all"
@@ -252,7 +264,7 @@ public enum FileCategoryFilter: String, CaseIterable, Identifiable {
     }
 }
 
-public class FileBotRenameItem: Identifiable, ObservableObject, @unchecked Sendable {
+public class RenameItem: Identifiable, ObservableObject, @unchecked Sendable {
     public let id: UUID
     public let downloadItemId: UUID?
     public let originalURL: URL
@@ -328,3 +340,6 @@ public class FileBotRenameItem: Identifiable, ObservableObject, @unchecked Senda
         return nil
     }
 }
+
+// Backward compatibility alias
+public typealias FileBotRenameItem = RenameItem

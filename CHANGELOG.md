@@ -8,8 +8,9 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 ## [0.7.0] - 2026-10-23
 
 ### Hinzugefügt
-- **FileBot Rename Studio (Native Integration & Heuristik)**:
-  - Vollständige Integration der FileBot CLI-Logik und smarter lokaler Heuristiken zum Umbenennen und Organisieren von Medien- und Seriendateien.
+- **Rename Studio (Medien- & Serien-Umbenennung)**:
+  - Vollständige Integration von Rename Studio mit smarter lokaler Heuristik, optionaler CLI-Anbindung und Google Gemini KI zum Umbenennen und Organisieren von Medien- und Seriendateien.
+  - Visuelle Fortschrittsbalken für Analyse/Abgleich und Umbenennungsausführung in Echtzeit (inkl. Prozentanzeige und aktueller Datei).
   - Automatischer Post-Download-Banner: Fragt den Nutzer nach Abschluss eines Downloads, ob die Dateien direkt in Serien- oder Staffelstruktur umbenannt werden sollen.
   - Standalone-Modus für bestehende Mac-Ordner: Beliebige lokale Ordner können über die Top-Navigation (`Dateien umbenennen...`) oder per Drag & Drop rekursiv eingelesen und verarbeitet werden.
   - Drei dedizierte Verarbeitungsmodi:

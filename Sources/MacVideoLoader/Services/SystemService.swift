@@ -16,6 +16,10 @@ public struct ToolStatus {
     public var isFilebotAvailable: Bool {
         return filebotPath != nil
     }
+
+    public var isRenameCliAvailable: Bool {
+        return filebotPath != nil
+    }
 }
 
 public class SystemService {
@@ -83,6 +87,10 @@ public class SystemService {
         if let node = which("node") { return node }
         if let deno = which("deno") { return deno }
         return nil
+    }
+
+    public func findRenameCLI(customPath: String = "") -> String? {
+        return findFilebot(customPath: customPath)
     }
 
     public func findFilebot(customPath: String = "") -> String? {

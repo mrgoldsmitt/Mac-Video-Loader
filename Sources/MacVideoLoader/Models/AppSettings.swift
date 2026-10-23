@@ -94,6 +94,24 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
         }
     }
 
+    // Rename Studio properties (aliases)
+    public var customRenameCliPath: String {
+        get { customFilebotPath }
+        set { customFilebotPath = newValue }
+    }
+    public var renameDefaultMode: String {
+        get { filebotDefaultMode }
+        set { filebotDefaultMode = newValue }
+    }
+    public var renameLanguage: String {
+        get { filebotLanguage }
+        set { filebotLanguage = newValue }
+    }
+    public var renameDatabase: String {
+        get { filebotDatabase }
+        set { filebotDatabase = newValue }
+    }
+
     @Published public var geminiModel: String {
         didSet {
             UserDefaults.standard.set(geminiModel, forKey: Keys.geminiModel)

@@ -157,9 +157,9 @@ public struct SettingsSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
 
-            // FileBot Renaming Section
+            // Rename Studio Section
             VStack(alignment: .leading, spacing: 8) {
-                Text("FileBot Medien-Umbenennung")
+                Text("Rename Studio & Medien-Organisation")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
 
@@ -169,7 +169,7 @@ public struct SettingsSheet: View {
                             Text("Unmittelbar nach dem Download nach Umbenennen fragen")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.white)
-                            Text("Fragt bei fertiggestellten Downloads, ob sie per FileBot in Serien- oder Staffelstruktur gebracht werden sollen.")
+                            Text("Fragt bei fertiggestellten Downloads, ob sie im Rename Studio in Serien- oder Staffelstruktur gebracht werden sollen.")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }
@@ -696,10 +696,10 @@ public struct SettingsSheet: View {
                     version: nil
                 )
 
-                // FileBot Status
+                // Rename-Engine Status
                 toolRow(
-                    name: "FileBot",
-                    description: "Serien- & Staffel-Renamer (Metadaten-Abgleich)",
+                    name: "Rename-CLI (Optional)",
+                    description: "Lokale CLI für TMDb/TVDB-Abgleich (FileBot CLI falls vorhanden)",
                     path: toolStatus.filebotPath,
                     version: toolStatus.filebotVersion
                 )

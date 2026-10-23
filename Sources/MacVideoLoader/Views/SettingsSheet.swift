@@ -12,6 +12,10 @@ public struct SettingsSheet: View {
     @State private var showConfirmUninstall: Bool = false
     @State private var isTestingCookies: Bool = false
     @State private var cookieTestResult: (success: Bool, message: String)? = nil
+    @State private var geminiApiKeyInput: String = ""
+    @State private var isGeminiKeyVisible: Bool = false
+    @State private var isTestingGemini: Bool = false
+    @State private var geminiTestResult: (success: Bool, message: String)? = nil
 
     public init(settings: AppSettings) {
         self.settings = settings
@@ -39,9 +43,10 @@ public struct SettingsSheet: View {
             // Tab Picker
             Picker("", selection: $selectedTab) {
                 Text("Allgemein").tag(0)
-                Text("Account & Cookies").tag(1)
-                Text("Werkzeuge & Diagnose").tag(2)
-                Text("Changelog").tag(3)
+                Text("Gemini KI").tag(1)
+                Text("Account & Cookies").tag(2)
+                Text("Werkzeuge & Diagnose").tag(3)
+                Text("Changelog").tag(4)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
@@ -56,8 +61,10 @@ public struct SettingsSheet: View {
                     if selectedTab == 0 {
                         generalTab
                     } else if selectedTab == 1 {
-                        accountTab
+                        geminiTab
                     } else if selectedTab == 2 {
+                        accountTab
+                    } else if selectedTab == 3 {
                         toolsTab
                     } else {
                         changelogTab
@@ -84,10 +91,11 @@ public struct SettingsSheet: View {
             .padding()
             .background(Color(red: 0.13, green: 0.13, blue: 0.15))
         }
-        .frame(width: 560, height: 460)
+        .frame(width: 580, height: 500)
         .background(Color(red: 0.10, green: 0.10, blue: 0.12))
         .onAppear {
             refreshTools()
+            geminiApiKeyInput = settings.getGeminiApiKey()
         }
     }
 
@@ -142,6 +150,31 @@ public struct SettingsSheet: View {
 
                     Stepper("\(settings.maxConcurrentDownloads)", value: $settings.maxConcurrentDownloads, in: 1...6)
                         .frame(width: 100)
+                }
+                .padding(10)
+                .background(Color.black.opacity(0.25))
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+
+            // FileBot Renaming Section
+            VStack(alignment: .leading, spacing: 8) {
+                Text("FileBot Medien-Umbenennung")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(isOn: $settings.askToRenameAfterDownload) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Unmittelbar nach dem Download nach Umbenennen fragen")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.white)
+                            Text("Fragt bei fertiggestellten Downloads, ob sie per FileBot in Serien- oder Staffelstruktur gebracht werden sollen.")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
                 }
                 .padding(10)
                 .background(Color.black.opacity(0.25))
@@ -240,7 +273,247 @@ public struct SettingsSheet: View {
         }
     }
 
-    // MARK: - Tab 2: Account & Cookies
+    // MARK: - Tab: Google Gemini KI
+    private var geminiTab: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header Card
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.5, green: 0.2, blue: 0.9), Color(red: 0.2, green: 0.4, blue: 0.95)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 36, height: 36)
+
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.white)
+                        .font(.system(size: 18, weight: .bold))
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Google Gemini KI für Medien & Plex")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Analysiert unstrukturierte Titel und benennt Folgen exakt passend für den Plex Media Server um.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // Section 1: API Key & Keychain
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Google Gemini API-Key")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    if settings.hasGeminiApiKey {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.shield.fill")
+                                .foregroundColor(.green)
+                            Text("Im Schlüsselbund gesichert")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.green)
+                        }
+                    } else {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundColor(.orange)
+                            Text("Nicht konfiguriert")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        if isGeminiKeyVisible {
+                            TextField("AIzaSy...", text: $geminiApiKeyInput)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 11, design: .monospaced))
+                        } else {
+                            SecureField("AIzaSy...", text: $geminiApiKeyInput)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 11, design: .monospaced))
+                        }
+
+                        Button(action: { isGeminiKeyVisible.toggle() }) {
+                            Image(systemName: isGeminiKeyVisible ? "eye.slash" : "eye")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .help(isGeminiKeyVisible ? "Schlüssel maskieren" : "Schlüssel anzeigen")
+
+                        Button("Speichern") {
+                            settings.setGeminiApiKey(geminiApiKeyInput)
+                            geminiTestResult = (true, "API-Key sicher im macOS-Schlüsselbund gespeichert.")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.purple)
+                        .font(.system(size: 11, weight: .semibold))
+                        .disabled(geminiApiKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                        if settings.hasGeminiApiKey {
+                            Button("Löschen") {
+                                settings.deleteGeminiApiKey()
+                                geminiApiKeyInput = ""
+                                geminiTestResult = nil
+                            }
+                            .buttonStyle(.bordered)
+                            .font(.system(size: 11))
+                            .foregroundColor(.red)
+                        }
+                    }
+
+                    // Key Test Button & Link
+                    HStack(spacing: 10) {
+                        Button(action: testGeminiApiKey) {
+                            if isTestingGemini {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                    .frame(width: 14, height: 14)
+                            } else {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle")
+                                    Text("Verbindung zu \(settings.geminiModel) testen")
+                                }
+                                .font(.system(size: 11))
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isTestingGemini || geminiApiKeyInput.isEmpty)
+
+                        Button(action: {
+                            if let url = URL(string: "https://aistudio.google.com/app/apikey") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }) {
+                            HStack(spacing: 3) {
+                                Text("Kostenlosen API-Key bei Google AI Studio holen")
+                                Image(systemName: "arrow.up.right")
+                            }
+                            .font(.system(size: 10))
+                            .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if let result = geminiTestResult {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: result.success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .foregroundColor(result.success ? .green : .orange)
+                                .font(.system(size: 12))
+                            Text(result.message)
+                                .font(.system(size: 11))
+                                .foregroundColor(result.success ? .green : .orange)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(8)
+                        .background((result.success ? Color.green : Color.orange).opacity(0.12))
+                        .cornerRadius(6)
+                    }
+                }
+                .padding(10)
+                .background(Color.black.opacity(0.25))
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+
+            // Section 2: Model Selection
+            VStack(alignment: .leading, spacing: 10) {
+                Text("KI-Modell auswählen")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Picker("Modell:", selection: $settings.geminiModel) {
+                            ForEach(GeminiModelOption.availableModels) { opt in
+                                Text("\(opt.displayName)\(opt.isRecommended ? " (Empfohlen)" : "")").tag(opt.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .font(.system(size: 12))
+                        .onChange(of: settings.geminiModel) { _ in
+                            geminiTestResult = nil
+                        }
+
+                        Spacer()
+                    }
+
+                    if let selected = GeminiModelOption.availableModels.first(where: { $0.id == settings.geminiModel }) {
+                        Text(selected.description)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(10)
+                .background(Color.black.opacity(0.25))
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+
+            // Section 3: Plex Naming Options
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Plex Media Server Formatierungs-Optionen")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Staffel-Ordnerbezeichnung:")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white)
+
+                        Picker("", selection: $settings.geminiPlexSeasonFolder) {
+                            Text("Season (z. B. 'Season 01' – Offizieller Plex-Standard)").tag("Season")
+                            Text("Staffel (z. B. 'Staffel 01' – Deutscher Standard)").tag("Staffel")
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    Toggle(isOn: $settings.geminiIncludeYear) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Erscheinungsjahr in Serientitel einbinden (z. B. 'Doctor Who (2005)')")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.white)
+                            Text("Von Plex dringend empfohlen, um Verwechslungen bei Remakes oder Reboots zu vermeiden.")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+
+                    // Plex Schema Summary
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("💡 Offizielles Plex-Benennungsmuster:")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white.opacity(0.9))
+                        Text("• Serien: Serientitel (Jahr) - s01e01 - Episodentitel.ext\n• Staffeln: Serientitel (Jahr)/\(settings.geminiPlexSeasonFolder) 01/Serientitel (Jahr) - s01e01 - Episodentitel.ext\n• Filme: Filmtitel (Jahr)/Filmtitel (Jahr).ext")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(8)
+                    .background(Color.white.opacity(0.04))
+                    .cornerRadius(6)
+                }
+                .padding(10)
+                .background(Color.black.opacity(0.25))
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            }
+        }
+    }
+
+    // MARK: - Tab 3: Account & Cookies
     private var accountTab: some View {
         VStack(alignment: .leading, spacing: 16) {
             Toggle(isOn: $settings.useCookies) {
@@ -421,6 +694,14 @@ public struct SettingsSheet: View {
                     description: "Signatur- & Challenge-Solver",
                     path: toolStatus.nodePath,
                     version: nil
+                )
+
+                // FileBot Status
+                toolRow(
+                    name: "FileBot",
+                    description: "Serien- & Staffel-Renamer (Metadaten-Abgleich)",
+                    path: toolStatus.filebotPath,
+                    version: toolStatus.filebotVersion
                 )
             }
 
@@ -738,6 +1019,25 @@ public struct SettingsSheet: View {
         }
     }
 
+    private func testGeminiApiKey() {
+        isTestingGemini = true
+        geminiTestResult = nil
+        let keyToTest = geminiApiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task {
+            let res = await GeminiService.shared.testApiKey(
+                apiKey: keyToTest,
+                model: settings.geminiModel
+            )
+            await MainActor.run {
+                self.geminiTestResult = res
+                self.isTestingGemini = false
+                if res.success {
+                    settings.setGeminiApiKey(keyToTest)
+                }
+            }
+        }
+    }
+
     private func openFullDiskAccessSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
             NSWorkspace.shared.open(url)
@@ -747,7 +1047,8 @@ public struct SettingsSheet: View {
     private func refreshTools() {
         toolStatus = SystemService.shared.checkToolsStatus(
             customYtDlp: settings.customYtDlpPath,
-            customFfmpeg: settings.customFfmpegPath
+            customFfmpeg: settings.customFfmpegPath,
+            customFilebot: settings.customFilebotPath
         )
     }
 }

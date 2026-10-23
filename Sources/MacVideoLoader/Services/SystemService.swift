@@ -6,9 +6,15 @@ public struct ToolStatus {
     public let ffmpegPath: String?
     public let ffmpegVersion: String?
     public let nodePath: String?
+    public let filebotPath: String?
+    public let filebotVersion: String?
 
     public var isReady: Bool {
         return ytDlpPath != nil && ffmpegPath != nil
+    }
+
+    public var isFilebotAvailable: Bool {
+        return filebotPath != nil
     }
 }
 
@@ -79,13 +85,36 @@ public class SystemService {
         return nil
     }
 
-    public func checkToolsStatus(customYtDlp: String = "", customFfmpeg: String = "") -> ToolStatus {
+    public func findFilebot(customPath: String = "") -> String? {
+        if !customPath.isEmpty && FileManager.default.isExecutableFile(atPath: customPath) {
+            return customPath
+        }
+
+        let candidates = [
+            "/usr/local/bin/filebot",
+            "/Applications/FileBot.app/Contents/MacOS/filebot.sh",
+            "/opt/homebrew/bin/filebot",
+            NSHomeDirectory() + "/.local/bin/filebot"
+        ]
+
+        for path in candidates {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return path
+            }
+        }
+
+        return which("filebot")
+    }
+
+    public func checkToolsStatus(customYtDlp: String = "", customFfmpeg: String = "", customFilebot: String = "") -> ToolStatus {
         let ytDlp = findYtDlp(customPath: customYtDlp)
         let ffmpeg = findFfmpeg(customPath: customFfmpeg)
         let node = findNodeOrDeno()
+        let filebot = findFilebot(customPath: customFilebot)
 
         var ytDlpVer: String? = nil
         var ffmpegVer: String? = nil
+        var filebotVer: String? = nil
 
         if let ytDlp = ytDlp {
             ytDlpVer = runSync(executable: ytDlp, arguments: ["--version"])?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -98,12 +127,18 @@ public class SystemService {
             }
         }
 
+        if let filebot = filebot {
+            filebotVer = runSync(executable: filebot, arguments: ["-version"])?.components(separatedBy: .newlines).first
+        }
+
         return ToolStatus(
             ytDlpPath: ytDlp,
             ytDlpVersion: ytDlpVer,
             ffmpegPath: ffmpeg,
             ffmpegVersion: ffmpegVer,
-            nodePath: node
+            nodePath: node,
+            filebotPath: filebot,
+            filebotVersion: filebotVer
         )
     }
 

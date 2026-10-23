@@ -56,6 +56,11 @@ public struct MainView: View {
                 .background(Color.red.opacity(0.18))
             }
 
+            // FileBot Post-Download Prompt Banner
+            if let promptItem = downloadManager.promptToRenameItem {
+                postDownloadRenameBanner(for: promptItem)
+            }
+
             // Queue Control Strip
             queueControlStrip
 
@@ -70,6 +75,16 @@ public struct MainView: View {
         .background(Color(red: 0.08, green: 0.08, blue: 0.09))
         .sheet(item: $downloadManager.detectedPlaylist) { playlist in
             PlaylistSelectionSheet(playlist: playlist, downloadManager: downloadManager)
+        }
+        .sheet(isPresented: Binding(
+            get: { downloadManager.fileBotRenameItems != nil || downloadManager.fileBotStandaloneFolder != nil },
+            set: { if !$0 { downloadManager.fileBotRenameItems = nil; downloadManager.fileBotStandaloneFolder = nil } }
+        )) {
+            FileBotRenameSheet(
+                downloadManager: downloadManager,
+                items: downloadManager.fileBotRenameItems,
+                standaloneFolder: downloadManager.fileBotStandaloneFolder
+            )
         }
         .onDrop(of: ["public.file-url", "public.utf8-plain-text", "public.url"], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers: providers)
@@ -118,6 +133,29 @@ public struct MainView: View {
             }
 
             Spacer()
+
+            // Standalone FileBot Rename Tool Button
+            Button(action: openStandaloneFolderPicker) {
+                HStack(spacing: 5) {
+                    Image(systemName: "pencil.and.list.clipboard")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.blue)
+
+                    Text("Dateien umbenennen...")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.white.opacity(0.06))
+                .cornerRadius(14)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .help("Bestehende Ordner & Dateien rekursiv nach Schema oder KI umbenennen")
 
             // Account Status Pill
             Button(action: { showSettings = true }) {
@@ -344,6 +382,27 @@ public struct MainView: View {
                     .buttonStyle(.plain)
                     .help("Ausgewählte Einträge als .mvl Datei speichern")
 
+                    // FileBot Rename Button for selected items
+                    let selectedCompleted = downloadManager.queue.filter { downloadManager.selectedItemIds.contains($0.id) && $0.status.isCompleted }
+                    if !selectedCompleted.isEmpty {
+                        Button(action: { downloadManager.openFileBotRenamer(items: selectedCompleted) }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "pencil.and.list.clipboard")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text("FileBot (\(selectedCompleted.count))...")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.25))
+                            .foregroundColor(.blue)
+                            .cornerRadius(5)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue.opacity(0.4), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Ausgewählte fertige Downloads mit FileBot umbenennen")
+                    }
+
                     // Entfernen
                     Button(action: { downloadManager.removeSelected() }) {
                         HStack(spacing: 4) {
@@ -437,6 +496,27 @@ public struct MainView: View {
                         .help("Downloads als wiederverwendbare .mvl Datei sichern")
                     }
 
+                    // FileBot Button if any completed items exist
+                    let completedItems = downloadManager.queue.filter { $0.status.isCompleted }
+                    if !completedItems.isEmpty {
+                        Button(action: { downloadManager.openFileBotRenamer(items: completedItems) }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "pencil.and.list.clipboard")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text("FileBot (\(completedItems.count))")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
+                            .cornerRadius(5)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.blue.opacity(0.35), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Fertige Downloads mit FileBot in Serien- oder Staffelstruktur umbenennen")
+                    }
+
                     // Pause / Resume All (Requirement 2)
                     if downloadManager.isPaused {
                         Button(action: { downloadManager.resumeAll() }) {
@@ -528,6 +608,92 @@ public struct MainView: View {
         )
     }
 
+    // MARK: - Post-Download FileBot Rename Banner
+    private func postDownloadRenameBanner(for item: DownloadItem) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.2))
+                    .frame(width: 32, height: 32)
+
+                Image(systemName: "pencil.and.list.clipboard")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.blue)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text("Download abgeschlossen:")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text(item.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.blue)
+                        .lineLimit(1)
+                }
+
+                Text("Möchtest du diese Datei jetzt mit FileBot in Serien- oder Staffelstruktur umbenennen?")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                Button(action: {
+                    downloadManager.promptToRenameItem = nil
+                    downloadManager.openFileBotRenamer(items: [item])
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.right.circle.fill")
+                        Text("Jetzt umbenennen")
+                    }
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.blue)
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+
+                Button("Später") {
+                    withAnimation {
+                        downloadManager.promptToRenameItem = nil
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+
+                Button(action: {
+                    settings.askToRenameAfterDownload = false
+                    withAnimation {
+                        downloadManager.promptToRenameItem = nil
+                    }
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                }
+                .buttonStyle(.plain)
+                .help("Nicht mehr automatisch nachfragen")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(red: 0.11, green: 0.14, blue: 0.22))
+        .overlay(
+            Rectangle()
+                .frame(height: 1)
+                .foregroundColor(Color.blue.opacity(0.35)),
+            alignment: .bottom
+        )
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
     // MARK: - Drag & Drop Handler (supports URLs, text, and .mvl list files)
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
         for provider in providers {
@@ -543,6 +709,14 @@ public struct MainView: View {
                     }
 
                     if let fileURL = targetURL {
+                        var isDir: ObjCBool = false
+                        if FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDir), isDir.boolValue {
+                            DispatchQueue.main.async {
+                                downloadManager.openFileBotRenamerForFolder(fileURL)
+                            }
+                            return
+                        }
+
                         let ext = fileURL.pathExtension.lowercased()
                         if ext == "mvl" || ext == "json" {
                             DispatchQueue.main.async {
@@ -566,5 +740,17 @@ public struct MainView: View {
             }
         }
         return true
+    }
+
+    private func openStandaloneFolderPicker() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Ordner öffnen"
+        panel.message = "Wähle einen Ordner aus, um alle enthaltenen Dateien rekursiv umzubenennen."
+        if panel.runModal() == .OK, let url = panel.url {
+            downloadManager.openFileBotRenamerForFolder(url)
+        }
     }
 }

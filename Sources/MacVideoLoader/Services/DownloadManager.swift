@@ -22,6 +22,11 @@ public class DownloadManager: ObservableObject {
     // Multi-selection state
     @Published public var selectedItemIds: Set<UUID> = []
 
+    // FileBot Post-Download Prompt & Sheet State
+    @Published public var promptToRenameItem: DownloadItem? = nil
+    @Published public var fileBotRenameItems: [DownloadItem]? = nil
+    @Published public var fileBotStandaloneFolder: URL? = nil
+
     private let settings = AppSettings.shared
     private let service = YTDlpService.shared
     private let persistence = QueuePersistenceService.shared
@@ -351,6 +356,10 @@ public class DownloadManager: ObservableObject {
                 item.retryCount = 0
                 self.persistQueue()
                 self.processQueue()
+
+                if self.settings.askToRenameAfterDownload {
+                    self.promptToRenameItem = item
+                }
             } catch {
                 self.cancelWatchdog(for: itemId)
                 if case .cancelled = item.status {
@@ -496,6 +505,47 @@ public class DownloadManager: ObservableObject {
         }
         persistQueue()
         processQueue()
+    }
+
+    public func skipSeries(for item: DownloadItem) {
+        guard let targetSeries = item.seriesTitle else {
+            skip(item: item)
+            return
+        }
+
+        for qItem in queue {
+            if qItem.seriesTitle == targetSeries {
+                if qItem.status.isActive {
+                    service.cancel(itemId: qItem.id)
+                }
+                qItem.status = .skipped
+                qItem.speed = ""
+                qItem.eta = ""
+            }
+        }
+        persistQueue()
+        processQueue()
+    }
+
+    // MARK: - FileBot Renaming Integration
+
+    public func openFileBotRenamer(items: [DownloadItem]) {
+        guard !items.isEmpty else { return }
+        self.fileBotStandaloneFolder = nil
+        self.fileBotRenameItems = items
+    }
+
+    public func openFileBotRenamerForFolder(_ folderURL: URL) {
+        self.fileBotRenameItems = nil
+        self.fileBotStandaloneFolder = folderURL
+    }
+
+    public func updateItemAfterRename(itemId: UUID, newURL: URL, newTitle: String) {
+        guard let item = queue.first(where: { $0.id == itemId }) else { return }
+        item.completedFileURL = newURL
+        item.title = newTitle
+        item.destinationFolder = newURL.deletingLastPathComponent()
+        persistQueue()
     }
 
     // MARK: - Multi-selection Actions (Requirement 5)

@@ -120,6 +120,16 @@ public enum DownloadStatus: Equatable {
         }
     }
 
+    public var isCompleted: Bool {
+        if case .completed = self { return true }
+        return false
+    }
+
+    public var completedURL: URL? {
+        if case .completed(let path) = self { return path }
+        return nil
+    }
+
     public var isActive: Bool {
         switch self {
         case .downloading, .fetchingInfo, .processing:
@@ -336,6 +346,10 @@ public class DownloadItem: Identifiable, ObservableObject, @unchecked Sendable {
         } else {
             return "\(audioFormat.shortName)"
         }
+    }
+
+    public var isCompleted: Bool {
+        return status.isCompleted
     }
 
     public func toDTO() -> DownloadItemDTO {

@@ -1,15 +1,32 @@
-# Mac Video Loader (MVL) für macOS – v0.6.0
+# Mac Video Loader (MVL) für macOS – v0.7.0
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue.svg)](https://www.apple.com/macos/)
 
-Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
+Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, ein integriertes **FileBot Rename Studio** mit **Google Gemini KI-Unterstützung**, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
 
 ---
 
 ## Highlights & Features
 
-- **Freie Zielordner-Wahl in der Übersicht & Stapel-Download (Neu in v0.6.0):**
+- **FileBot Rename Studio & Google Gemini KI-Integration (Neu in v0.7.0):**
+  - **Automatischer Umbenennungs-Prompt nach Downloads**: Nach jedem Download fragt MVL auf Wunsch, ob die Dateien direkt in einheitliche Serien- oder Staffelstrukturen umbenannt werden sollen.
+  - **Bestehende Mac-Ordner rekursiv umbenennen**: Über den Button „Dateien umbenennen...“ in der Top-Navigation oder per Drag & Drop können beliebige Ordner inklusive aller Unterordner eingelesen und verarbeitet werden.
+  - **Drei spezialisierte Verarbeitungsmodi**:
+    - `Serienverarbeitung`: Einheitliche Namensgebung für TV-Folgen (`{n} - {s00e00} - {t}`).
+    - `Staffelverarbeitung`: Automatische Staffelordner-Hierarchien für Plex/Jellyfin (`{n}/Staffel {s.pad(2)}/{n} - {s00e00} - {t}`).
+    - `Dateien & Markup`: Beliebige Dateitypen nach benutzerdefinierten Schemata (`{folder} - {index.pad(2)} - {original}`), Tokens oder freitextlichen KI-Prompts umbenennen.
+  - **Google Gemini KI (Plex- & Dokumenten-Optimierung)**:
+    - Native Google Gemini Integration (Gemini 2.5 Flash / Pro) für sekundenschnelle, intelligente Benennungsvorschläge.
+    - **Recherche echter Episodennummern**: Gleicht Episodentitel mit TMDb/TVDB ab, sodass Folgen nach ihrem tatsächlichen Inhalt nummeriert werden – unabhängig vom Anfangsbuchstaben des Titels.
+    - **Dediziertes KI-Prompt-Eingabefeld**: Individuelle Anweisungen und Zusatzhinweise direkt an die KI übergeben (inkl. Ideen-Schnellmenü für TV-Serien, Rechnungen, Fotos und Jahresordner).
+    - **Expliziter Abgleich**: Der Abgleich startet nicht automatisch, sondern erst bei Klick auf „Abgleichen“.
+    - **Höchste Sicherheit**: Gemini API-Keys werden verschlüsselt im macOS-Schlüsselbund (`KeychainService`) gespeichert.
+  - **Markup-Token-Engine**: 1-Klick-Einfügung von Tokens (`{original}`, `{folder}`, `{date}`, `{year}`, `{index.pad(2)}`, `{clean}`, `{lower}`, `{ext}`).
+  - **Dateifilter & Checkbox-Auswahl**: Schnelles Filtern nach Dateikategorien (Videos, Audio, Dokumente, Bilder, Sonstige) mit Zählern und selektivem Ein-/Ausschließen.
+  - **Eigene Queue-Abschnitte**: Abgeschlossene und fehlerhafte Downloads landen übersichtlich in separaten, ein- und ausklappbaren Abschnitten am Listenende.
+
+- **Freie Zielordner-Wahl in der Übersicht & Stapel-Download (v0.6.0):**
   - **Zielordner direkt beim Hinzufügen bestimmen**: Direkt in der Eingabeleiste der Übersicht kann für einzelne Videos oder Playlists ein eigener Zielordner gewählt werden.
   - **Nahtloser Standard-Fallback**: Bleibt die Auswahl leer oder wird zurückgesetzt, speichert MVL automatisch im in den Einstellungen hinterlegten Standard-Zielordner.
   - **Stapel-Download mit Ordnerauswahl**: Auch im Dialog „Mehrere URLs...“ (`BatchAddSheet`) kann der Zielordner flexibel vorab festgelegt oder angepasst werden.

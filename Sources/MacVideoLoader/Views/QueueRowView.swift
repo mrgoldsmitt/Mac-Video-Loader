@@ -223,8 +223,19 @@ public struct QueueRowView: View {
                     .help("Diesen Download überspringen")
                 }
 
-                // Reveal in Finder button when completed
+                // FileBot Rename button when completed
                 if case .completed = item.status {
+                    Button(action: { downloadManager.openFileBotRenamer(items: [item]) }) {
+                        Image(systemName: "pencil.and.list.clipboard")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.blue)
+                            .frame(width: 26, height: 26)
+                            .background(Color.blue.opacity(0.18))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Mit FileBot umbenennen...")
+
                     Button(action: { downloadManager.revealInFinder(item: item) }) {
                         Image(systemName: "folder.fill")
                             .font(.system(size: 11))
@@ -295,8 +306,14 @@ public struct QueueRowView: View {
 
                 if let series = item.seriesTitle {
                     Button("Ganze Serie '\(series)' überspringen") {
-                        downloadManager.skipSeason(for: item)
+                        downloadManager.skipSeries(for: item)
                     }
+                }
+            }
+
+            if case .completed = item.status {
+                Button("Mit FileBot umbenennen...") {
+                    downloadManager.openFileBotRenamer(items: [item])
                 }
             }
 

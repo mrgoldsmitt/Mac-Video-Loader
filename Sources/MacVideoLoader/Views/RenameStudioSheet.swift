@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 public struct RenameStudioSheet: View {
-    @ObservedObject var downloadManager: DownloadManager
+    let downloadManager: DownloadManager
     @StateObject private var settings = AppSettings.shared
 
     @State private var renameItems: [RenameItem] = []
@@ -52,6 +52,9 @@ public struct RenameStudioSheet: View {
             ?? items?.first?.destinationFolder
             ?? AppSettings.shared.downloadFolder
         _currentFolder = State(initialValue: initialFolder)
+
+        let initialDb = RenameDatabase(rawValue: AppSettings.shared.renameDatabase) ?? .gemini
+        _database = State(initialValue: initialDb)
     }
 
     private func dismissView() {
@@ -61,7 +64,11 @@ public struct RenameStudioSheet: View {
     }
 
     private var isAIActive: Bool {
-        return (mode == .custom && useCustomAI) || (mode != .custom && database == .gemini)
+        if mode == .custom {
+            return useCustomAI
+        } else {
+            return database == .gemini
+        }
     }
 
     public var filteredItems: [RenameItem] {
@@ -236,7 +243,7 @@ public struct RenameStudioSheet: View {
     // MARK: - Configuration Strip
     private var configurationStrip: some View {
         VStack(spacing: 8) {
-            // Row 1: Mode Switcher & Engine Selection
+            // Row 1: Mode Switcher, Engine & Series Query
             HStack(spacing: 12) {
                 // Processing Mode
                 VStack(alignment: .leading, spacing: 3) {
@@ -245,12 +252,12 @@ public struct RenameStudioSheet: View {
                         .foregroundColor(.secondary)
 
                     Picker("", selection: $mode) {
-                        ForEach(RenameProcessingMode.allCases) { m in
+                        ForEach(RenameProcessingMode.allCases, id: \.self) { m in
                             Label(m.displayName, systemImage: m.icon).tag(m)
                         }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 360)
+                    .frame(width: 330)
                     .onChange(of: mode) { newMode in
                         formatExpression = newMode.defaultFormat
                         if newMode == .custom && database == .gemini {
@@ -278,50 +285,31 @@ public struct RenameStudioSheet: View {
                             }
                         }
                     }
+                } else {
+                    // Database Engine
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Engine / Abgleich")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.secondary)
 
-                    if useCustomAI {
-                        // AI Provider Picker
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("KI-Anbieter")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.purple)
-
-                            Picker("", selection: $settings.selectedAIProvider) {
-                                ForEach(AIProvider.allCases) { p in
-                                    Text(p.displayName).tag(p)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(width: 170)
-                            .onChange(of: settings.selectedAIProvider) { p in
-                                if !settings.hasApiKey(for: p) {
-                                    showApiKeySection = true
-                                }
+                        Picker("", selection: $database) {
+                            ForEach(RenameDatabase.allCases, id: \.self) { db in
+                                Text(db.displayName).tag(db)
                             }
                         }
-
-                        // AI Model Picker
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Modell")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.purple)
-
-                            Picker("", selection: Binding(
-                                get: { settings.getModel(for: settings.selectedAIProvider) },
-                                set: { settings.setModel($0, for: settings.selectedAIProvider) }
-                            )) {
-                                ForEach(AIModelOption.models(for: settings.selectedAIProvider)) { opt in
-                                    Text(opt.displayName).tag(opt.id)
-                                }
+                        .pickerStyle(.menu)
+                        .frame(width: 220)
+                        .onChange(of: database) { newDb in
+                            settings.renameDatabase = newDb.rawValue
+                            if newDb == .gemini && !settings.hasApiKey(for: settings.selectedAIProvider) {
+                                showApiKeySection = true
                             }
-                            .pickerStyle(.menu)
-                            .frame(width: 160)
                         }
                     }
-                } else {
+
                     // Series Title Query
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Serientitel / Suchbegriff (TMDb / TVDB)")
+                        Text(database == .gemini ? "Serientitel (Optional)" : "Serientitel / Suchbegriff (TMDb / TVDB)")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.secondary)
 
@@ -354,100 +342,16 @@ public struct RenameStudioSheet: View {
                         .cornerRadius(6)
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.12), lineWidth: 1))
                     }
+                    .frame(minWidth: 200, maxWidth: 300)
 
-                    // Database Engine
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Engine / Abgleich")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.secondary)
-
-                        Picker("", selection: $database) {
-                            ForEach(RenameDatabase.allCases) { db in
-                                Text(db.displayName).tag(db)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 190)
-                        .onChange(of: database) { newDb in
-                            if newDb == .gemini && !settings.hasApiKey(for: settings.selectedAIProvider) {
-                                showApiKeySection = true
-                            }
-                        }
-                    }
-
-                    if database == .gemini {
-                        // AI Provider Picker
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("KI-Anbieter")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.purple)
-
-                            Picker("", selection: $settings.selectedAIProvider) {
-                                ForEach(AIProvider.allCases) { p in
-                                    Text(p.displayName).tag(p)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(width: 165)
-                            .onChange(of: settings.selectedAIProvider) { p in
-                                if !settings.hasApiKey(for: p) {
-                                    showApiKeySection = true
-                                } else {
-                                    Task {
-                                        _ = await settings.refreshModels(for: p)
-                                    }
-                                }
-                            }
-                        }
-
-                        // AI Model Picker with Live Refresh
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Modell")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.purple)
-
-                            HStack(spacing: 4) {
-                                Picker("", selection: Binding(
-                                    get: { settings.getModel(for: settings.selectedAIProvider) },
-                                    set: { settings.setModel($0, for: settings.selectedAIProvider) }
-                                )) {
-                                    ForEach(settings.models(for: settings.selectedAIProvider)) { opt in
-                                        Text(opt.displayName).tag(opt.id)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .frame(width: 175)
-
-                                Button(action: {
-                                    Task {
-                                        isRefreshingModels = true
-                                        _ = await settings.refreshModels(for: settings.selectedAIProvider)
-                                        isRefreshingModels = false
-                                    }
-                                }) {
-                                    if isRefreshingModels {
-                                        ProgressView()
-                                            .scaleEffect(0.5)
-                                            .frame(width: 12, height: 12)
-                                    } else {
-                                        Image(systemName: "arrow.clockwise")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(isRefreshingModels || !settings.hasApiKey(for: settings.selectedAIProvider))
-                                .help("Verfügbare Modelle live von \(settings.selectedAIProvider.displayName) über deinen API-Key abrufen")
-                            }
-                        }
-                    } else {
+                    if database != .gemini {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Sprache")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.secondary)
 
                             Picker("", selection: $language) {
-                                ForEach(RenameLanguage.allCases) { lang in
+                                ForEach(RenameLanguage.allCases, id: \.self) { lang in
                                     Text(lang.displayName).tag(lang)
                                 }
                             }
@@ -460,82 +364,152 @@ public struct RenameStudioSheet: View {
                 Spacer()
             }
 
-            // Row 2: AI Prompt Input (Visible whenever AI is active!)
+            // Row 2: Dedicated AI Control Strip (Visible whenever AI is active!)
             if isAIActive {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(.purple)
-                        .font(.system(size: 12, weight: .bold))
+                HStack(spacing: 12) {
+                    // KI-Anbieter
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .foregroundColor(.purple)
+                            .font(.system(size: 11, weight: .bold))
+                        Text("KI-Anbieter:")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.purple)
 
-                    Text("KI-Prompt & Hinweise:")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.purple)
-
-                    TextField(
-                        mode == .custom
-                            ? "z. B. 'Rechnungen nach Datum und Firma umbenennen' oder 'Fotos nummerieren'..."
-                            : "z. B. 'Staffel 2, echte TVDB-Reihenfolge nach Episodentitel prüfen', 'Chronologisch ab Folge 1 nummerieren'...",
-                        text: $aiPromptText
-                    )
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 11))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.black.opacity(0.35))
-                    .cornerRadius(5)
-                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.purple.opacity(0.35), lineWidth: 1))
-                    .onSubmit {
-                        triggerMatch()
+                        Picker("", selection: $settings.selectedAIProvider) {
+                            ForEach(AIProvider.allCases, id: \.self) { p in
+                                Text(p.displayName).tag(p)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 155)
+                        .onChange(of: settings.selectedAIProvider) { p in
+                            if !settings.hasApiKey(for: p) {
+                                showApiKeySection = true
+                            } else {
+                                Task {
+                                    _ = await settings.refreshModels(for: p)
+                                }
+                            }
+                        }
                     }
 
-                    // Prompt Ideas Menu
-                    Menu {
-                        Text("Vorgaben & Hinweise für KI:")
-                        if mode == .custom {
-                            Button("📄 Rechnungen (YYYY-MM-DD_Firma_Rechnung)") {
-                                aiPromptText = "Benenne Rechnungsdokumente nach dem Schema 'YYYY-MM-DD - [Firma oder Aussteller] - Rechnung.pdf' um."
+                    // Modell
+                    HStack(spacing: 6) {
+                        Text("Modell:")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.purple)
+
+                        HStack(spacing: 4) {
+                            Picker("", selection: Binding(
+                                get: { settings.getModel(for: settings.selectedAIProvider) },
+                                set: { settings.setModel($0, for: settings.selectedAIProvider) }
+                            )) {
+                                ForEach(settings.models(for: settings.selectedAIProvider)) { opt in
+                                    Text(opt.displayName).tag(opt.id)
+                                }
                             }
-                            Button("🖼️ Fotos (Datum & Motiv)") {
-                                aiPromptText = "Erkenne Aufnahmedatum und Motiv und erstelle sprechende Bildnamen (z. B. '2024-06-15 - Strand.jpg')."
+                            .pickerStyle(.menu)
+                            .frame(width: 165)
+
+                            Button(action: {
+                                Task {
+                                    isRefreshingModels = true
+                                    _ = await settings.refreshModels(for: settings.selectedAIProvider)
+                                    isRefreshingModels = false
+                                }
+                            }) {
+                                if isRefreshingModels {
+                                    ProgressView()
+                                        .scaleEffect(0.5)
+                                        .frame(width: 12, height: 12)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+                                }
                             }
-                            Button("🧹 Bereinigen & Lesbar machen") {
-                                aiPromptText = "Entferne Web-Artefakte, Kanalnamen, kryptische Zeichen, doppelte Leerzeichen und Videoauflösungen."
-                            }
-                            Button("📂 Nach Jahr in Ordner strukturieren") {
-                                aiPromptText = "Sortiere Dateien in Jahresordner ein: '[YYYY]/[YYYY-MM-DD] - [Dateiname].[ext]'."
-                            }
-                        } else {
-                            Button("🔍 Echte TVDB/TMDb Episodennummerierung ermitteln") {
-                                aiPromptText = "Recherchiere die echten Episodennummern passend zu den Episodentiteln. Ein alphabetisch früher Buchstabe ist nicht Folge 1."
-                            }
-                            Button("🔢 Chronologisch / Fortlaufend nummerieren (1...N)") {
-                                aiPromptText = "Staffel 1. Nummeriere die Episoden fortlaufend ab Folge 1 (s01e01, s01e02, s01e03...)."
-                            }
-                            Button("📺 Staffel 2 vorgeben (s02e01...)") {
-                                aiPromptText = "Dies ist Staffel 2. Nummeriere als s02e01, s02e02 fortlaufend nach dem tatsächlichen Episodeninhalt."
-                            }
-                            Button("🧹 Mediathek- & Sendernamen entfernen") {
-                                aiPromptText = "Bereinige Sendernamen (ARD, ZDF), Kürzel und Auflösungen vollständig aus dem Episodentitel."
-                            }
+                            .buttonStyle(.plain)
+                            .disabled(isRefreshingModels || !settings.hasApiKey(for: settings.selectedAIProvider))
+                            .help("Verfügbare Modelle live von \(settings.selectedAIProvider.displayName) über deinen API-Key abrufen")
                         }
-                        Divider()
-                        Button("Textfeld leeren") {
-                            aiPromptText = ""
-                        }
-                    } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: "lightbulb.fill")
-                            Text("Tipps")
-                        }
+                    }
+
+                    Divider()
+                        .frame(height: 18)
+                        .background(Color.white.opacity(0.15))
+
+                    // KI-Prompt & Hinweise
+                    HStack(spacing: 6) {
+                        Text("Prompt:")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.purple)
+
+                        TextField(
+                            mode == .custom
+                                ? "z. B. 'Rechnungen nach Datum und Firma umbenennen' oder 'Fotos nummerieren'..."
+                                : "z. B. 'Staffel 2, echte TVDB-Reihenfolge nach Episodentitel prüfen', 'Chronologisch ab Folge 1 nummerieren'...",
+                            text: $aiPromptText
+                        )
+                        .textFieldStyle(.plain)
                         .font(.system(size: 11))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.35))
+                        .cornerRadius(5)
+                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.purple.opacity(0.35), lineWidth: 1))
+                        .onSubmit {
+                            triggerMatch()
+                        }
+
+                        // Prompt Ideas Menu
+                        Menu {
+                            Text("Vorgaben & Hinweise für KI:")
+                            if mode == .custom {
+                                Button("📄 Rechnungen (YYYY-MM-DD_Firma_Rechnung)") {
+                                    aiPromptText = "Benenne Rechnungsdokumente nach dem Schema 'YYYY-MM-DD - [Firma oder Aussteller] - Rechnung.pdf' um."
+                                }
+                                Button("🖼️ Fotos (Datum & Motiv)") {
+                                    aiPromptText = "Erkenne Aufnahmedatum und Motiv und erstelle sprechende Bildnamen (z. B. '2024-06-15 - Strand.jpg')."
+                                }
+                                Button("🧹 Bereinigen & Lesbar machen") {
+                                    aiPromptText = "Entferne Web-Artefakte, Kanalnamen, kryptische Zeichen, doppelte Leerzeichen und Videoauflösungen."
+                                }
+                                Button("📂 Nach Jahr in Ordner strukturieren") {
+                                    aiPromptText = "Sortiere Dateien in Jahresordner ein: '[YYYY]/[YYYY-MM-DD] - [Dateiname].[ext]'."
+                                }
+                            } else {
+                                Button("🔍 Echte TVDB/TMDb Episodennummerierung ermitteln") {
+                                    aiPromptText = "Recherchiere die echten Episodennummern passend zu den Episodentiteln. Ein alphabetisch früher Buchstabe ist nicht Folge 1."
+                                }
+                                Button("🔢 Chronologisch / Fortlaufend nummerieren (1...N)") {
+                                    aiPromptText = "Staffel 1. Nummeriere die Episoden fortlaufend ab Folge 1 (s01e01, s01e02, s01e03...)."
+                                }
+                                Button("📺 Staffel 2 vorgeben (s02e01...)") {
+                                    aiPromptText = "Dies ist Staffel 2. Nummeriere als s02e01, s02e02 fortlaufend nach dem tatsächlichen Episodeninhalt."
+                                }
+                                Button("🧹 Mediathek- & Sendernamen entfernen") {
+                                    aiPromptText = "Bereinige Sendernamen (ARD, ZDF), Kürzel und Auflösungen vollständig aus dem Episodentitel."
+                                }
+                            }
+                            Divider()
+                            Button("Textfeld leeren") {
+                                aiPromptText = ""
+                            }
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "lightbulb.fill")
+                                Text("Tipps")
+                            }
+                            .font(.system(size: 11))
+                        }
                     }
-                    .frame(width: 75)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color.purple.opacity(0.10))
+                .background(Color.purple.opacity(0.12))
                 .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.purple.opacity(0.25), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.purple.opacity(0.3), lineWidth: 1))
             }
 
             // Row 3: Format Expression, Token Chips & Match Button
@@ -868,7 +842,7 @@ public struct RenameStudioSheet: View {
                         .foregroundColor(.white)
 
                     Picker("", selection: $settings.selectedAIProvider) {
-                        ForEach(AIProvider.allCases) { p in
+                        ForEach(AIProvider.allCases, id: \.self) { p in
                             Text(p.shortName).tag(p)
                         }
                     }

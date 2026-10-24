@@ -1,11 +1,11 @@
 import Foundation
 
-public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
+public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable, Hashable {
     case gemini = "gemini"
     case chatgpt = "chatgpt"
     case claude = "claude"
 
-    public var id: String { rawValue }
+    public var id: Self { self }
 
     public var displayName: String {
         switch self {

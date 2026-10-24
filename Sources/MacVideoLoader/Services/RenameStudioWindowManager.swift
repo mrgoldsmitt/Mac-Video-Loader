@@ -42,16 +42,18 @@ public final class RenameStudioWindowManager: NSObject, NSWindowDelegate {
         items: [DownloadItem]? = nil,
         standaloneFolder: URL? = nil
     ) {
-        if let existingWindow = windowController?.window {
-            let view = RenameStudioSheet(
-                downloadManager: downloadManager,
-                items: items,
-                standaloneFolder: standaloneFolder,
-                onDismiss: { [weak self] in
-                    self?.close()
-                }
-            )
-            existingWindow.contentView = NSHostingView(rootView: view)
+        if let existingWindow = windowController?.window, existingWindow.isVisible {
+            if items != nil || standaloneFolder != nil {
+                let view = RenameStudioSheet(
+                    downloadManager: downloadManager,
+                    items: items,
+                    standaloneFolder: standaloneFolder,
+                    onDismiss: { [weak self] in
+                        self?.close()
+                    }
+                )
+                existingWindow.contentView = NSHostingView(rootView: view)
+            }
             existingWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return

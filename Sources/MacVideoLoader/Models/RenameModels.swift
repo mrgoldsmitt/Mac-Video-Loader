@@ -1,12 +1,12 @@
 import Foundation
 import Combine
 
-public enum RenameProcessingMode: String, CaseIterable, Identifiable, Codable {
+public enum RenameProcessingMode: String, CaseIterable, Identifiable, Codable, Hashable {
     case series = "series"
     case season = "season"
     case custom = "custom"
 
-    public var id: String { rawValue }
+    public var id: Self { self }
 
     public var displayName: String {
         switch self {
@@ -56,13 +56,13 @@ public enum RenameProcessingMode: String, CaseIterable, Identifiable, Codable {
 // Backward compatibility alias
 public typealias FileBotProcessingMode = RenameProcessingMode
 
-public enum RenameDatabase: String, CaseIterable, Identifiable, Codable {
+public enum RenameDatabase: String, CaseIterable, Identifiable, Codable, Hashable {
     case themoviedb = "TheMovieDB::TV"
     case thetvdb = "TheTVDB"
     case anidb = "AniDB"
     case gemini = "Gemini::Plex"
 
-    public var id: String { rawValue }
+    public var id: Self { self }
 
     public var displayName: String {
         switch self {
@@ -77,11 +77,11 @@ public enum RenameDatabase: String, CaseIterable, Identifiable, Codable {
 // Backward compatibility alias
 public typealias FileBotDatabase = RenameDatabase
 
-public enum RenameLanguage: String, CaseIterable, Identifiable, Codable {
+public enum RenameLanguage: String, CaseIterable, Identifiable, Codable, Hashable {
     case german = "German"
     case english = "English"
 
-    public var id: String { rawValue }
+    public var id: Self { self }
 
     public var displayName: String {
         switch self {
@@ -205,7 +205,7 @@ public struct RenameFormatPreset: Identifiable {
 // Backward compatibility alias
 public typealias FileBotFormatPreset = RenameFormatPreset
 
-public enum FileCategoryFilter: String, CaseIterable, Identifiable {
+public enum FileCategoryFilter: String, CaseIterable, Identifiable, Hashable {
     case all = "all"
     case video = "video"
     case audio = "audio"
@@ -213,7 +213,7 @@ public enum FileCategoryFilter: String, CaseIterable, Identifiable {
     case image = "image"
     case other = "other"
 
-    public var id: String { rawValue }
+    public var id: Self { self }
 
     public var displayName: String {
         switch self {

@@ -7,6 +7,13 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ## [0.7.1] - 2026-10-24
 
+### Behoben & Verbessert
+- **Behebung der KI-Abgleich-Auswahl & Prompt-Eingabe im Rename Studio**:
+  - **Identitäts-Synchronisation der PopUp-Buttons**: Durch Umstellung aller Enums (`RenameDatabase`, `RenameProcessingMode`, `RenameLanguage`, `AIProvider`, `FileCategoryFilter`) auf `id: Self { self }` und explizites `id: \.self` im ForEach wurde ein macOS-AppKit-Tag-Mismatch behoben, der dazu führte, dass bei Klick auf "✨ KI-Abgleich" fälschlicherweise "AniDB" ausgewählt wurde (und umgekehrt).
+  - **Stabile Prompt-Texteingabe**: Das Texteingabefeld für KI-Prompts bleibt nun dauerhaft geöffnet und verliert während des Tippens weder den Fokus noch schließt es sich unerwartet.
+  - **Erschütterungsfreies & stabiles Layout**: Völlige Neustrukturierung der Konfigurationsleiste. Die KI-Steuerelemente (`KI-Anbieter`, `Modell` mit Live-Aktualisierung und das flexible `Prompt`-Eingabefeld inkl. `Tipps`-Menü) befinden sich nun in einer separaten, violett hervorgehobenen Zeile 2. Zeile 1 (Verarbeitungsmodus, Engine, Serientitel/Suchbegriff, Sprache) behält feste, ideale Breiten – kein Stauchen oder Springen der Eingabefelder mehr beim Umschalten von Modi oder Engines.
+  - **Reibungslose Eingabe ohne UI-Flicker**: Entkopplung des Rename Studio Fensters von hochfrequenten Hintergrund-Download-Fortschritten (`@ObservedObject` zu `let downloadManager`), sodass Hintergrund-Downloads die Tastatureingabe im Rename Studio zu keinem Zeitpunkt unterbrechen.
+
 ### Hinzugefügt
 - **Frei verschiebbares Fenster für Rename Studio**:
   - Rename Studio öffnet nun in einem eigenständigen macOS-Fenster (`NSWindow` / `RenameStudioWindowManager`) anstatt als fixiertes modales Sheet.

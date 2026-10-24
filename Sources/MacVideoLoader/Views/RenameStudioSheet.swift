@@ -445,22 +445,33 @@ public struct RenameStudioSheet: View {
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.purple)
 
-                        TextField(
-                            mode == .custom
-                                ? "z. B. 'Rechnungen nach Datum und Firma umbenennen' oder 'Fotos nummerieren'..."
-                                : "z. B. 'Staffel 2, echte TVDB-Reihenfolge nach Episodentitel prüfen', 'Chronologisch ab Folge 1 nummerieren'...",
-                            text: $aiPromptText
-                        )
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 11))
+                        HStack(spacing: 6) {
+                            TextField(
+                                mode == .custom
+                                    ? "z. B. 'Rechnungen nach Datum und Firma umbenennen' oder 'Fotos nummerieren'..."
+                                    : "z. B. 'Staffel 2, echte TVDB-Reihenfolge prüfen', 'Ab Folge 1 nummerieren'...",
+                                text: $aiPromptText
+                            )
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 11))
+
+                            if !aiPromptText.isEmpty {
+                                Button(action: {
+                                    aiPromptText = ""
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 11))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Prompt leeren")
+                            }
+                        }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Color.black.opacity(0.35))
                         .cornerRadius(5)
                         .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.purple.opacity(0.35), lineWidth: 1))
-                        .onSubmit {
-                            triggerMatch()
-                        }
 
                         // Prompt Ideas Menu
                         Menu {

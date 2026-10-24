@@ -8,6 +8,12 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 ## [0.7.1] - 2026-10-24
 
 ### Behoben & Verbessert
+- **Behebung des doppelten Fensteröffnens & Stabilität der Prompteingabe**:
+  - **Striktes Single-Window-Management**: `RenameStudioWindowManager` verwaltet nun eine direkte Fenster-Referenz (`window: NSWindow?`) und ignoriert asynchrone Doppelaufrufe vollständig. Ein Klick auf Umbenennen bringt stets das existierende Fenster in den Vordergrund, statt ein zweites Fenster im Hintergrund zu instanziieren.
+  - **Entfernung redundanter Observer in MainView**: Die doppelten `.onChange`-Handler in `MainView` wurden entfernt, da `DownloadManager` das Fenster bereits verlässlich öffnet.
+  - **Fokus-Stabilität der Texteingabe**: `isMovableByWindowBackground` wurde auf `false` gesetzt. Zuvor fing AppKit Mausklicks und Selektionen im Textfeld als Fenster-Drag ab, wodurch der Cursor und Eingabefokus verloren gingen. Das Verschieben des Fensters erfolgt nun sicher und nativ über den Header-Drag-Handle.
+  - **Kein vorzeitiges Auslösen bei Enter**: `.onSubmit` wurde vom Prompt-Eingabefeld entfernt, sodass das Drücken von Enter während des Tippens den Abgleich nicht mehr unabsichtlich startet. Der Abgleich startet exklusiv bei Klick auf „Mit KI abgleichen“.
+  - **Schnellbereinigung**: Zusätzlicher Lösch-Button (`xmark.circle.fill`) direkt im Prompt-Eingabefeld.
 - **Behebung der KI-Abgleich-Auswahl & Prompt-Eingabe im Rename Studio**:
   - **Identitäts-Synchronisation der PopUp-Buttons**: Durch Umstellung aller Enums (`RenameDatabase`, `RenameProcessingMode`, `RenameLanguage`, `AIProvider`, `FileCategoryFilter`) auf `id: Self { self }` und explizites `id: \.self` im ForEach wurde ein macOS-AppKit-Tag-Mismatch behoben, der dazu führte, dass bei Klick auf "✨ KI-Abgleich" fälschlicherweise "AniDB" ausgewählt wurde (und umgekehrt).
   - **Stabile Prompt-Texteingabe**: Das Texteingabefeld für KI-Prompts bleibt nun dauerhaft geöffnet und verliert während des Tippens weder den Fokus noch schließt es sich unerwartet.

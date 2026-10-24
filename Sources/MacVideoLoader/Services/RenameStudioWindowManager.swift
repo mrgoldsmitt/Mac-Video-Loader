@@ -27,10 +27,10 @@ public struct WindowDragHandle: NSViewRepresentable {
 public final class RenameStudioWindowManager: NSObject, NSWindowDelegate {
     public static let shared = RenameStudioWindowManager()
 
-    private var windowController: NSWindowController?
+    private var window: NSWindow?
 
     public var isWindowOpen: Bool {
-        return windowController?.window?.isVisible == true
+        return window != nil
     }
 
     private override init() {
@@ -42,19 +42,10 @@ public final class RenameStudioWindowManager: NSObject, NSWindowDelegate {
         items: [DownloadItem]? = nil,
         standaloneFolder: URL? = nil
     ) {
-        if let existingWindow = windowController?.window, existingWindow.isVisible {
-            if items != nil || standaloneFolder != nil {
-                let view = RenameStudioSheet(
-                    downloadManager: downloadManager,
-                    items: items,
-                    standaloneFolder: standaloneFolder,
-                    onDismiss: { [weak self] in
-                        self?.close()
-                    }
-                )
-                existingWindow.contentView = NSHostingView(rootView: view)
-            }
-            existingWindow.makeKeyAndOrderFront(nil)
+        // If window already exists, NEVER create a second window!
+        // Simply bring the existing window to front and focus it.
+        if let existing = self.window {
+            existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
@@ -70,34 +61,36 @@ public final class RenameStudioWindowManager: NSObject, NSWindowDelegate {
 
         let hostingView = NSHostingView(rootView: contentView)
 
-        let window = NSWindow(
+        let newWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1040, height: 700),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.minSize = NSSize(width: 960, height: 580)
-        window.center()
-        window.title = "Rename Studio"
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
-        window.backgroundColor = NSColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 1.0)
-        window.contentView = hostingView
-        window.delegate = self
-        window.setFrameAutosaveName("MacVideoLoader_RenameStudioWindow")
+        newWindow.minSize = NSSize(width: 960, height: 580)
+        newWindow.center()
+        newWindow.title = "Rename Studio"
+        newWindow.titleVisibility = .hidden
+        newWindow.titlebarAppearsTransparent = true
+        // CRITICAL: Disable window background dragging so TextFields, Pickers, and buttons
+        // retain first-responder status and never lose focus or jitter during mouse clicks/typing!
+        newWindow.isMovableByWindowBackground = false
+        newWindow.backgroundColor = NSColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 1.0)
+        newWindow.contentView = hostingView
+        newWindow.delegate = self
+        newWindow.setFrameAutosaveName("MacVideoLoader_RenameStudioWindow")
+        newWindow.isReleasedWhenClosed = false
 
-        let wc = NSWindowController(window: window)
-        self.windowController = wc
-        window.makeKeyAndOrderFront(nil)
+        self.window = newWindow
+        newWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     public func close() {
-        if let win = windowController?.window {
+        if let win = window {
             win.close()
         }
-        windowController = nil
+        self.window = nil
         DownloadManager.shared.renameStudioItems = nil
         DownloadManager.shared.renameStudioFolder = nil
     }
@@ -105,7 +98,7 @@ public final class RenameStudioWindowManager: NSObject, NSWindowDelegate {
     // MARK: - NSWindowDelegate
 
     public func windowWillClose(_ notification: Notification) {
-        self.windowController = nil
+        self.window = nil
         DownloadManager.shared.renameStudioItems = nil
         DownloadManager.shared.renameStudioFolder = nil
     }

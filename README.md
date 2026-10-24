@@ -1,16 +1,17 @@
-# Mac Video Loader (MVL) für macOS – v0.7.0
+# Mac Video Loader (MVL) für macOS – v0.7.1
 
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue.svg)](https://www.apple.com/macos/)
 
-Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, ein integriertes **Rename Studio** mit **Multi-KI-Unterstützung (ChatGPT, Claude & Gemini)**, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
+Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum Herunterladen von Videos von **beliebigen Webseiten**, aus den **öffentlich-rechtlichen Mediatheken (ARD, ZDF, Arte, 3sat, KiKa etc.)** sowie von **YouTube**. Unterstützt automatische Erkennung bester Videoqualitäten (MP4), flexible Zielordner-Wahl direkt in der Übersicht und im Stapel-Download, Playlist- und Staffelauswahl mit automatischer Ordnerstrukturierung, ein integriertes, **frei verschiebbares Rename Studio** mit **Multi-KI-Unterstützung (ChatGPT, Claude & Gemini)** inklusive **Live-Modellabruf**, dauerhafte Warteschlangen-Persistenz, Ausfallsicherheit mit automatischem Resume sowie Tonspur-Extraktion (MP3, M4A, FLAC, WAV, Opus).
 
 ---
 
 ## Highlights & Features
 
-- **Rename Studio & Multi-KI-Integration (ChatGPT, Claude & Gemini – Neu in v0.7.0):**
-  - **Freie Wahl des KI-Anbieters**: Unterstützt **ChatGPT (OpenAI)**, **Claude (Anthropic)** und **Google Gemini** für intelligente Benennungsvorschläge.
+- **Rename Studio & Multi-KI-Integration (ChatGPT, Claude & Gemini – Aktualisiert in v0.7.1):**
+  - **Frei verschiebbares Fenster**: Rename Studio öffnet in einem eigenständigen, vollwertigen macOS-Fenster (`NSWindow` / `RenameStudioWindowManager`) mit `isMovableByWindowBackground` und nativem Header-Drag-Handle (`WindowDragHandle`). Es kann frei über alle Bildschirme bewegt, skaliert und minimiert werden, während Downloads im Hintergrund sichtbar weiterlaufen.
+  - **Freie Wahl des KI-Anbieters & Live-Modellabruf**: Unterstützt **Google Gemini** (inkl. aktuellem `gemini-2.5-flash-lite`), **ChatGPT (OpenAI)** (`gpt-4o-mini`, `gpt-4o`, `o3-mini`, `o1`) und **Claude (Anthropic)** (`claude-3-5-haiku`, `claude-3-7-sonnet`, `claude-3-5-sonnet`). Über die Schaltfläche „Modelle abrufen“ werden alle für den individuellen API-Key freigeschalteten Modelle live von der jeweiligen Anbieter-API abgefragt.
   - **Automatischer Umbenennungs-Prompt nach Downloads**: Nach jedem Download fragt MVL auf Wunsch, ob die Dateien direkt in einheitliche Serien- oder Staffelstrukturen umbenannt werden sollen.
   - **Bestehende Mac-Ordner rekursiv umbenennen**: Über den Button „Dateien umbenennen...“ in der Top-Navigation oder per Drag & Drop können beliebige Ordner inklusive aller Unterordner eingelesen und verarbeitet werden.
   - **Drei spezialisierte Verarbeitungsmodi**:
@@ -18,7 +19,6 @@ Eine moderne, native Mac-Anwendung in **SwiftUI** im eleganten **Dark Mode** zum
     - `Staffelverarbeitung`: Automatische Staffelordner-Hierarchien für Plex/Jellyfin (`{n}/Staffel {s.pad(2)}/{n} - {s00e00} - {t}`).
     - `Dateien & Markup`: Beliebige Dateitypen nach benutzerdefinierten Schemata (`{folder} - {index.pad(2)} - {original}`), Tokens oder freitextlichen KI-Prompts umbenennen.
   - **Intelligente KI-Umbenennung (Plex- & Dokumenten-Optimierung)**:
-    - Modell-Auswahl je nach Anbieter (`gpt-4o-mini`, `gpt-4o`, `o3-mini`, `claude-3-5-haiku`, `claude-3-5-sonnet`, `gemini-2.5-flash`, `gemini-2.5-pro`).
     - **Recherche echter Episodennummern**: Gleicht Episodentitel mit TMDb/TVDB ab, sodass Folgen nach ihrem tatsächlichen Inhalt nummeriert werden – unabhängig vom Anfangsbuchstaben des Titels.
     - **Dediziertes KI-Prompt-Eingabefeld**: Individuelle Anweisungen und Zusatzhinweise direkt an die KI übergeben (inkl. Ideen-Schnellmenü für TV-Serien, Rechnungen, Fotos und Jahresordner).
     - **Expliziter Abgleich**: Der Abgleich startet nicht automatisch, sondern erst bei Klick auf „Abgleichen“.

@@ -30,7 +30,8 @@ public final class AIService: @unchecked Sendable {
     }
 
     private func testGeminiApiKey(apiKey: String, model: String) async -> (success: Bool, message: String) {
-        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)") else {
+        let cleanModel = model.replacingOccurrences(of: "models/", with: "")
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(cleanModel):generateContent?key=\(apiKey)") else {
             return (false, "Ungültige API-URL für Modell \(model).")
         }
 
@@ -146,6 +147,225 @@ public final class AIService: @unchecked Sendable {
         } catch {
             return (false, "Netzwerkfehler: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Dynamic Model Discovery
+
+    public func fetchAvailableModels(provider: AIProvider, apiKey: String) async throws -> [AIModelOption] {
+        let cleanKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanKey.isEmpty else {
+            return AIModelOption.models(for: provider)
+        }
+
+        switch provider {
+        case .gemini:
+            return try await fetchGeminiModels(apiKey: cleanKey)
+        case .chatgpt:
+            return try await fetchOpenAIModels(apiKey: cleanKey)
+        case .claude:
+            return try await fetchClaudeModels(apiKey: cleanKey)
+        }
+    }
+
+    private func fetchGeminiModels(apiKey: String) async throws -> [AIModelOption] {
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models?key=\(apiKey)") else {
+            throw NSError(domain: "AIService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Ungültige Gemini Models-URL."])
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AIService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Keine HTTP-Antwort von Google Gemini erhalten."])
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errMsg = extractErrorMessage(from: data) ?? "Statuscode \(httpResponse.statusCode)"
+            throw NSError(domain: "AIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Gemini API Fehler (\(httpResponse.statusCode)): \(errMsg)"])
+        }
+
+        guard let rootJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let modelsList = rootJson["models"] as? [[String: Any]] else {
+            throw NSError(domain: "AIService", code: 502, userInfo: [NSLocalizedDescriptionKey: "Ungültiges Modell-Antwortformat von Google Gemini."])
+        }
+
+        var options: [AIModelOption] = []
+        for item in modelsList {
+            guard let rawName = item["name"] as? String else { continue }
+            let id = rawName.replacingOccurrences(of: "models/", with: "")
+
+            // Only models supporting generateContent
+            if let methods = item["supportedGenerationMethods"] as? [String] {
+                guard methods.contains("generateContent") else { continue }
+            }
+
+            // Exclude embedding, aqa, imagen, veo
+            let lower = id.lowercased()
+            if lower.contains("embedding") || lower.contains("aqa") || lower.contains("imagen") || lower.contains("veo") {
+                continue
+            }
+
+            // Exclude older deprecated models like 2.0-flash or 2.5-flash if marked
+            if lower == "gemini-2.0-flash" || lower == "gemini-2.5-flash" {
+                continue
+            }
+
+            let dispName = (item["displayName"] as? String)?.trimmingCharacters(in: .whitespaces) ?? id
+            let desc = (item["description"] as? String)?.trimmingCharacters(in: .whitespaces) ?? "Verfügbares Gemini Modell"
+            let isRec = id == "gemini-2.5-flash-lite" || id.contains("flash-lite")
+
+            options.append(AIModelOption(
+                id: id,
+                provider: .gemini,
+                displayName: dispName.isEmpty ? id : dispName,
+                description: desc,
+                isRecommended: isRec
+            ))
+        }
+
+        if options.isEmpty {
+            return AIModelOption.models(for: .gemini)
+        }
+
+        // Sort: Recommended first, then version descending
+        options.sort { a, b in
+            if a.isRecommended != b.isRecommended {
+                return a.isRecommended && !b.isRecommended
+            }
+            return a.id > b.id
+        }
+
+        return options
+    }
+
+    private func fetchOpenAIModels(apiKey: String) async throws -> [AIModelOption] {
+        guard let url = URL(string: "https://api.openai.com/v1/models") else {
+            throw NSError(domain: "AIService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Ungültige OpenAI Models-URL."])
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AIService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Keine HTTP-Antwort von OpenAI erhalten."])
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errMsg = extractErrorMessage(from: data) ?? "Statuscode \(httpResponse.statusCode)"
+            throw NSError(domain: "AIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "OpenAI API Fehler (\(httpResponse.statusCode)): \(errMsg)"])
+        }
+
+        guard let rootJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let dataList = rootJson["data"] as? [[String: Any]] else {
+            throw NSError(domain: "AIService", code: 502, userInfo: [NSLocalizedDescriptionKey: "Ungültiges Modell-Antwortformat von OpenAI."])
+        }
+
+        var options: [AIModelOption] = []
+        for item in dataList {
+            guard let id = item["id"] as? String else { continue }
+            let lower = id.lowercased()
+
+            // Filter for chat generation models
+            let isChatModel = lower.hasPrefix("gpt-4") || lower.hasPrefix("gpt-3.5") || lower.hasPrefix("o1") || lower.hasPrefix("o3") || lower.hasPrefix("chatgpt-")
+            guard isChatModel else { continue }
+
+            if lower.contains("realtime") || lower.contains("audio") || lower.contains("transcription") ||
+               lower.contains("embedding") || lower.contains("dall-e") || lower.contains("tts") ||
+               lower.contains("whisper") || lower.contains("moderation") || lower.contains("instruct") {
+                continue
+            }
+
+            let isRec = id == "gpt-4o-mini"
+            var desc = "OpenAI Chatmodell"
+            if id.contains("mini") {
+                desc = "Ultraschnell, präzise & kostengünstig"
+            } else if id.contains("o1") || id.contains("o3") {
+                desc = "Reasoning-Modell für tiefes logisches Durchdenken"
+            } else if id.contains("4o") {
+                desc = "Omni-Flaggschiffmodell von OpenAI"
+            }
+
+            options.append(AIModelOption(
+                id: id,
+                provider: .chatgpt,
+                displayName: id,
+                description: desc,
+                isRecommended: isRec
+            ))
+        }
+
+        if options.isEmpty {
+            return AIModelOption.models(for: .chatgpt)
+        }
+
+        options.sort { a, b in
+            if a.isRecommended != b.isRecommended {
+                return a.isRecommended && !b.isRecommended
+            }
+            return a.id < b.id
+        }
+
+        return options
+    }
+
+    private func fetchClaudeModels(apiKey: String) async throws -> [AIModelOption] {
+        guard let url = URL(string: "https://api.anthropic.com/v1/models") else {
+            throw NSError(domain: "AIService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Ungültige Anthropic Models-URL."])
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            return AIModelOption.models(for: .claude)
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            return AIModelOption.models(for: .claude)
+        }
+
+        guard let rootJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let dataList = rootJson["data"] as? [[String: Any]] else {
+            return AIModelOption.models(for: .claude)
+        }
+
+        var options: [AIModelOption] = []
+        for item in dataList {
+            guard let id = item["id"] as? String else { continue }
+            let dispName = (item["display_name"] as? String) ?? id
+            let isRec = id.contains("haiku")
+            let desc = id.contains("sonnet") ? "Hervorragende Präzision & Detailtreue" :
+                       id.contains("haiku") ? "Ultraschnell & kostengünstig" :
+                       id.contains("opus") ? "Klassisches Spitzenmodell" : "Claude Modell"
+
+            options.append(AIModelOption(
+                id: id,
+                provider: .claude,
+                displayName: dispName,
+                description: desc,
+                isRecommended: isRec
+            ))
+        }
+
+        if options.isEmpty {
+            return AIModelOption.models(for: .claude)
+        }
+
+        options.sort { a, b in
+            if a.isRecommended != b.isRecommended {
+                return a.isRecommended && !b.isRecommended
+            }
+            return a.id > b.id
+        }
+
+        return options
     }
 
     // MARK: - Plex-optimierte KI-Umbenennung
@@ -365,7 +585,8 @@ public final class AIService: @unchecked Sendable {
         systemInstruction: String,
         userPrompt: String
     ) async throws -> String {
-        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)") else {
+        let cleanModel = model.replacingOccurrences(of: "models/", with: "")
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(cleanModel):generateContent?key=\(apiKey)") else {
             throw NSError(domain: "AIService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Ungültige Gemini Modell-URL."])
         }
 

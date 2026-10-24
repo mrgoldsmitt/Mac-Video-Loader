@@ -23,6 +23,7 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
         static let claudeModel = "claudeModel"
         static let geminiPlexSeasonFolder = "geminiPlexSeasonFolder"
         static let geminiIncludeYear = "geminiIncludeYear"
+        static let dynamicModelsData = "dynamicModelsData"
     }
 
     @Published public var downloadFolder: URL {
@@ -148,6 +149,51 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
     @Published public var geminiIncludeYear: Bool {
         didSet {
             UserDefaults.standard.set(geminiIncludeYear, forKey: Keys.geminiIncludeYear)
+        }
+    }
+
+    @Published public var dynamicModels: [String: [AIModelOption]] = [:] {
+        didSet {
+            if let data = try? JSONEncoder().encode(dynamicModels) {
+                UserDefaults.standard.set(data, forKey: Keys.dynamicModelsData)
+            }
+        }
+    }
+
+    public func models(for provider: AIProvider) -> [AIModelOption] {
+        if let list = dynamicModels[provider.rawValue], !list.isEmpty {
+            return list
+        }
+        return AIModelOption.models(for: provider)
+    }
+
+    @MainActor
+    public func refreshModels(for provider: AIProvider) async -> (success: Bool, count: Int, message: String) {
+        let key = getApiKey(for: provider)
+        guard !key.isEmpty else {
+            return (false, 0, "Kein \(provider.displayName) API-Key hinterlegt.")
+        }
+
+        do {
+            let fetched = try await AIService.shared.fetchAvailableModels(provider: provider, apiKey: key)
+            if !fetched.isEmpty {
+                self.dynamicModels[provider.rawValue] = fetched
+
+                // Validate current model against fetched models
+                let current = getModel(for: provider)
+                if !fetched.contains(where: { $0.id == current }) {
+                    if let recommended = fetched.first(where: { $0.isRecommended }) {
+                        setModel(recommended.id, for: provider)
+                    } else if let first = fetched.first {
+                        setModel(first.id, for: provider)
+                    }
+                }
+                return (true, fetched.count, "\(fetched.count) verfügbare Modelle für \(provider.shortName) erfolgreich geladen.")
+            } else {
+                return (false, 0, "Keine aktiven Modelle von \(provider.shortName) zurückgegeben.")
+            }
+        } catch {
+            return (false, 0, "Modelle konnten nicht abgerufen werden: \(error.localizedDescription)")
         }
     }
 
@@ -277,9 +323,19 @@ public class AppSettings: ObservableObject, @unchecked Sendable {
             self.selectedAIProvider = .gemini
         }
 
+        if let data = UserDefaults.standard.data(forKey: Keys.dynamicModelsData),
+           let saved = try? JSONDecoder().decode([String: [AIModelOption]].self, from: data) {
+            self.dynamicModels = saved
+        }
+
         self.chatgptModel = UserDefaults.standard.string(forKey: Keys.chatgptModel) ?? AIProvider.chatgpt.defaultModel
         self.claudeModel = UserDefaults.standard.string(forKey: Keys.claudeModel) ?? AIProvider.claude.defaultModel
-        self.geminiModel = UserDefaults.standard.string(forKey: Keys.geminiModel) ?? AIProvider.gemini.defaultModel
+        var loadedGemini = UserDefaults.standard.string(forKey: Keys.geminiModel) ?? AIProvider.gemini.defaultModel
+        // Migrate unavailable/deprecated models to gemini-2.5-flash-lite
+        if loadedGemini == "gemini-2.0-flash" || loadedGemini == "gemini-2.5-flash" {
+            loadedGemini = "gemini-2.5-flash-lite"
+        }
+        self.geminiModel = loadedGemini
         self.geminiPlexSeasonFolder = UserDefaults.standard.string(forKey: Keys.geminiPlexSeasonFolder) ?? "Season"
         if UserDefaults.standard.object(forKey: Keys.geminiIncludeYear) == nil {
             self.geminiIncludeYear = true

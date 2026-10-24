@@ -1,7 +1,7 @@
 ---
 title: "Mac Video Loader (MVL)"
-version: 0.7.0
-release_date: 2026-10-23
+version: 0.7.1
+release_date: 2026-10-24
 author: "mrgoldsmitt"
 license: "CC BY-NC 4.0"
 tags:
@@ -55,8 +55,9 @@ graph TD
 | Modul | Datei | Aufgabe |
 | :--- | :--- | :--- |
 | `DownloadManager` | `Services/DownloadManager.swift` | Zentrale Steuerung der Warteschlange, Multi-Threading, Persistenz & Playlist-Inspektion. |
+| `RenameStudioWindowManager` | `Services/RenameStudioWindowManager.swift` | Verwaltet das eigenständige, frei verschiebbare macOS-Fenster für Rename Studio inkl. Drag-Handle. |
 | `RenameService` | `Services/RenameService.swift` | Anbindung optionaler CLI, rekursive Ordnerscans & lokale Heuristik für Serien/Dateien. |
-| `AIService` | `Services/AIService.swift` | Einheitlicher REST-Client für OpenAI (ChatGPT), Anthropic (Claude) & Google (Gemini). |
+| `AIService` | `Services/AIService.swift` | Einheitlicher REST-Client für OpenAI (ChatGPT), Anthropic (Claude) & Google (Gemini) inkl. Live-Modellabfrage. |
 | `KeychainService` | `Services/KeychainService.swift` | Getrennte, sichere Speicherung sensibler Tokens aller Anbieter im macOS-Schlüsselbund. |
 | `YTDlpService` | `Services/YTDlpService.swift` | Subprozess-Wrapper für `yt-dlp` und `ffmpeg` mit Watchdog-Schutz. |
 | `RenameStudioSheet` | `Views/RenameStudioSheet.swift` | Dual-Pane Vorschauoberfläche mit Fortschrittsbalken, Echtzeit-Filtern, Tokens und KI-Prompt. |
@@ -67,8 +68,11 @@ graph TD
 
 Das **Rename Studio** kann wahlweise direkt im Anschluss an einen Download oder als eigenständiges Werkzeug für bestehende Ordner geöffnet werden.
 
+> [!TIP] Eigenständiges & frei verschiebbares Fenster
+> Rename Studio läuft als vollwertiges macOS-Fenster (`NSWindow` mit `isMovableByWindowBackground` und `WindowDragHandle`). Es kann frei über alle angeschlossenen Bildschirme verschoben, minimiert und beliebig skaliert werden, während die Download-Warteschlange im Hauptfenster ungestört weiterläuft.
+
 > [!TIP] Ordner-Auswahl & Rekursives Scannen
-> Über die Top-Navigation (`Dateien umbenennen...`) oder per Drag & Drop eines Finders-Ordners wird der Ordner rekursiv inklusive aller Unterordner durchsucht (`RenameService.scanFolderRecursively`).
+> Über die Top-Navigation (`Dateien umbenennen...`) oder per Drag & Drop eines Finder-Ordners wird der Ordner rekursiv inklusive aller Unterordner durchsucht (`RenameService.scanFolderRecursively`).
 
 ### Die drei Verarbeitungsmodi
 
@@ -96,11 +100,13 @@ Das **Rename Studio** kann wahlweise direkt im Anschluss an einen Download oder 
 
 ## 3. Multi-KI-Integration (ChatGPT, Claude & Gemini)
 
-> [!NOTE] Freie Anbieter- und Modellauswahl
+> [!NOTE] Freie Anbieter- und Modellauswahl mit Live-API-Abruf
 > Nutzer können flexibel ihren bevorzugten Anbieter wählen:
-> - **OpenAI**: `gpt-4o-mini` (Standard), `gpt-4o`, `o3-mini`, `gpt-4-turbo`
-> - **Anthropic**: `claude-3-5-haiku` (Standard), `claude-3-5-sonnet`, `claude-3-opus`
-> - **Google**: `gemini-2.5-flash` (Standard), `gemini-2.5-pro`, `gemini-2.0-flash`
+> - **Google**: `gemini-2.5-flash-lite` (Empfohlen), `gemini-2.5-pro`, `gemini-1.5-flash`, `gemini-1.5-pro`
+> - **OpenAI**: `gpt-4o-mini` (Empfohlen), `gpt-4o`, `o3-mini`, `o1-mini`, `o1`, `gpt-4-turbo`
+> - **Anthropic**: `claude-3-5-haiku-20241022` (Empfohlen), `claude-3-7-sonnet-20250219`, `claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`
+> 
+> **Dynamischer Modell-Abruf**: Über die Aktualisieren-Schaltfläche (`arrow.clockwise` / "Modelle abrufen") fragt die App die jeweilige Provider-API live nach allen für den spezifischen Key freigeschalteten Modellen ab und passt die Auswahl dynamisch an.
 > Die jeweiligen API-Keys werden separat und sicher im macOS-Schlüsselbund hinterlegt.
 
 ### Funktionsweise
@@ -162,6 +168,6 @@ swift build
 ### Release-Informationen
 
 - **Repository**: `github.com/mrgoldsmitt/Mac-Video-Loader`
-- **Aktuelle Version**: `v0.7.0`
+- **Aktuelle Version**: `v0.7.1`
 - **Lizenz**: [Creative Commons Namensnennung - Nicht-kommerziell 4.0 (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/deed.de)
 - **Copyright**: (c) 2026 `mrgoldsmitt`

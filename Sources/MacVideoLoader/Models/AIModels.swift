@@ -57,57 +57,64 @@ public enum AIProvider: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var defaultModel: String {
         switch self {
-        case .gemini: return "gemini-2.5-flash"
+        case .gemini: return "gemini-2.5-flash-lite"
         case .chatgpt: return "gpt-4o-mini"
         case .claude: return "claude-3-5-haiku-20241022"
         }
     }
 }
 
-public struct AIModelOption: Identifiable, Hashable, Sendable {
+public struct AIModelOption: Identifiable, Hashable, Codable, Sendable {
     public let id: String
     public let provider: AIProvider
     public let displayName: String
     public let description: String
     public let isRecommended: Bool
 
+    public init(
+        id: String,
+        provider: AIProvider,
+        displayName: String,
+        description: String,
+        isRecommended: Bool = false
+    ) {
+        self.id = id
+        self.provider = provider
+        self.displayName = displayName
+        self.description = description
+        self.isRecommended = isRecommended
+    }
+
     public static func models(for provider: AIProvider) -> [AIModelOption] {
         switch provider {
         case .gemini:
             return [
                 AIModelOption(
-                    id: "gemini-2.5-flash",
+                    id: "gemini-2.5-flash-lite",
                     provider: .gemini,
-                    displayName: "Gemini 2.5 Flash",
-                    description: "Empfohlen: Ultraschnell & präzise",
+                    displayName: "Gemini 2.5 Flash-Lite",
+                    description: "Empfohlen: Ultraschnell, ressourceneffizient & präzise",
                     isRecommended: true
                 ),
                 AIModelOption(
                     id: "gemini-2.5-pro",
                     provider: .gemini,
                     displayName: "Gemini 2.5 Pro",
-                    description: "Maximale Genauigkeit für komplexe Titel",
-                    isRecommended: false
-                ),
-                AIModelOption(
-                    id: "gemini-2.0-flash",
-                    provider: .gemini,
-                    displayName: "Gemini 2.0 Flash",
-                    description: "Multitasking-Modell der 2. Generation",
+                    description: "Maximale Genauigkeit für komplexe Titel & Serienstrukturen",
                     isRecommended: false
                 ),
                 AIModelOption(
                     id: "gemini-1.5-flash",
                     provider: .gemini,
                     displayName: "Gemini 1.5 Flash",
-                    description: "Stabiles Vorgängermodell",
+                    description: "Bewährtes & stabiles Allround-Modell",
                     isRecommended: false
                 ),
                 AIModelOption(
                     id: "gemini-1.5-pro",
                     provider: .gemini,
                     displayName: "Gemini 1.5 Pro",
-                    description: "Großes Kontextfenster",
+                    description: "Großes Kontextfenster für komplexe Strukturen",
                     isRecommended: false
                 )
             ]
@@ -117,28 +124,42 @@ public struct AIModelOption: Identifiable, Hashable, Sendable {
                     id: "gpt-4o-mini",
                     provider: .chatgpt,
                     displayName: "GPT-4o Mini",
-                    description: "Empfohlen: Ultraschnell, kostengünstig & präzise",
+                    description: "Empfohlen: Ultraschnell, kostengünstig & hochpräzise",
                     isRecommended: true
                 ),
                 AIModelOption(
                     id: "gpt-4o",
                     provider: .chatgpt,
                     displayName: "GPT-4o",
-                    description: "Omni-Flaggschiffmodell von OpenAI für anspruchsvolle Aufgaben",
+                    description: "Omni-Flaggschiffmodell von OpenAI für komplexe Aufgaben",
                     isRecommended: false
                 ),
                 AIModelOption(
                     id: "o3-mini",
                     provider: .chatgpt,
                     displayName: "o3-mini",
-                    description: "Reasoning-Modell für tiefes logisches Durchdenken",
+                    description: "Neuestes Reasoning-Modell für tiefes logisches Durchdenken",
+                    isRecommended: false
+                ),
+                AIModelOption(
+                    id: "o1-mini",
+                    provider: .chatgpt,
+                    displayName: "o1-mini",
+                    description: "Kompaktes Reasoning-Modell",
+                    isRecommended: false
+                ),
+                AIModelOption(
+                    id: "o1",
+                    provider: .chatgpt,
+                    displayName: "o1",
+                    description: "Leistungsstarkes Reasoning-Flaggschiff",
                     isRecommended: false
                 ),
                 AIModelOption(
                     id: "gpt-4-turbo",
                     provider: .chatgpt,
                     displayName: "GPT-4 Turbo",
-                    description: "Klassisches GPT-4 Modell",
+                    description: "Klassisches Spitzenmodell von OpenAI",
                     isRecommended: false
                 )
             ]
@@ -148,8 +169,15 @@ public struct AIModelOption: Identifiable, Hashable, Sendable {
                     id: "claude-3-5-haiku-20241022",
                     provider: .claude,
                     displayName: "Claude 3.5 Haiku",
-                    description: "Empfohlen: Herausragende Geschwindigkeit & Intelligenz",
+                    description: "Empfohlen: Ultraschnell & kostengünstig",
                     isRecommended: true
+                ),
+                AIModelOption(
+                    id: "claude-3-7-sonnet-20250219",
+                    provider: .claude,
+                    displayName: "Claude 3.7 Sonnet",
+                    description: "Neuestes Hybrid-Reasoning-Modell für maximale Intelligenz",
+                    isRecommended: false
                 ),
                 AIModelOption(
                     id: "claude-3-5-sonnet-20241022",

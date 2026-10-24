@@ -5,6 +5,22 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [0.7.1] - 2026-10-24
+
+### Hinzugefügt
+- **Frei verschiebbares Fenster für Rename Studio**:
+  - Rename Studio öffnet nun in einem eigenständigen macOS-Fenster (`NSWindow` / `RenameStudioWindowManager`) anstatt als fixiertes modales Sheet.
+  - Vollständige Bewegungsfreiheit: Das Fenster lässt sich auf beliebige Monitore verschieben, stufenlos in Breite und Höhe skalieren, minimieren und verfügt über macOS-Fenstersteuerelemente sowie `isMovableByWindowBackground` und einen Header-Drag-Handle (`WindowDragHandle`).
+  - Ermöglicht paralleles Verfolgen von Downloads im Hauptfenster während der Dateiorganisation.
+- **Dynamischer Live-Modellabruf & Modell-Aktualisierung je KI-Anbieter**:
+  - **Google Gemini**: Aufnahme des aktuellen `gemini-2.5-flash-lite` ("Gemini 2.5 Flash-Lite") als empfohlenes Standardmodell. Entfernen veralteter/nicht verfügbarer Modell-IDs (`gemini-2.0-flash`, `gemini-2.5-flash`) inklusive automatischer Migration gespeicherter Benutzereinstellungen.
+  - **ChatGPT (OpenAI)**: Unterstützung für `gpt-4o-mini`, `gpt-4o`, `o3-mini`, `o1-mini`, `o1` und `gpt-4-turbo`.
+  - **Claude (Anthropic)**: Unterstützung für `claude-3-5-haiku-20241022`, `claude-3-7-sonnet-20250219`, `claude-3-5-sonnet-20241022` und `claude-3-opus-20240229`.
+  - **Live-Abfrage der Kontomodelle**: Über den Button "Modelle abrufen" bzw. das Aktualisieren-Symbol (`arrow.clockwise`) werden alle für den individuellen API-Key freigeschalteten Modelle direkt von der jeweiligen Anbieter-API geladen und für künftige Sitzungen lokal zwischengespeichert.
+  - Automatischer Modell-Abgleich beim Speichern des Schlüssels sowie nach erfolgreichem Verbindungstest.
+
+---
+
 ## [0.7.0] - 2026-10-23
 
 ### Hinzugefügt

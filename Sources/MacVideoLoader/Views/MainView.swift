@@ -76,15 +76,15 @@ public struct MainView: View {
         .sheet(item: $downloadManager.detectedPlaylist) { playlist in
             PlaylistSelectionSheet(playlist: playlist, downloadManager: downloadManager)
         }
-        .sheet(isPresented: Binding(
-            get: { downloadManager.renameStudioItems != nil || downloadManager.renameStudioFolder != nil },
-            set: { if !$0 { downloadManager.renameStudioItems = nil; downloadManager.renameStudioFolder = nil } }
-        )) {
-            RenameStudioSheet(
-                downloadManager: downloadManager,
-                items: downloadManager.renameStudioItems,
-                standaloneFolder: downloadManager.renameStudioFolder
-            )
+        .onChange(of: downloadManager.renameStudioItems) { items in
+            if let items = items, !items.isEmpty, !RenameStudioWindowManager.shared.isWindowOpen {
+                RenameStudioWindowManager.shared.show(downloadManager: downloadManager, items: items, standaloneFolder: nil)
+            }
+        }
+        .onChange(of: downloadManager.renameStudioFolder) { folder in
+            if let folder = folder, !RenameStudioWindowManager.shared.isWindowOpen {
+                RenameStudioWindowManager.shared.show(downloadManager: downloadManager, items: nil, standaloneFolder: folder)
+            }
         }
         .onDrop(of: ["public.file-url", "public.utf8-plain-text", "public.url"], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers: providers)

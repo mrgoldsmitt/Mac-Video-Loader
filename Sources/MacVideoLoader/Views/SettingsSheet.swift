@@ -16,6 +16,8 @@ public struct SettingsSheet: View {
     @State private var isApiKeyVisible: Bool = false
     @State private var isTestingAI: Bool = false
     @State private var aiTestResult: (success: Bool, message: String)? = nil
+    @State private var isRefreshingModels: Bool = false
+    @State private var refreshStatusMessage: String? = nil
 
     public init(settings: AppSettings) {
         self.settings = settings
@@ -319,7 +321,15 @@ public struct SettingsSheet: View {
                 .onChange(of: settings.selectedAIProvider) { newProvider in
                     currentApiKeyInput = settings.getApiKey(for: newProvider)
                     aiTestResult = nil
+                    refreshStatusMessage = nil
                     isApiKeyVisible = false
+                    if settings.hasApiKey(for: newProvider) && settings.dynamicModels[newProvider.rawValue] == nil {
+                        Task {
+                            isRefreshingModels = true
+                            _ = await settings.refreshModels(for: newProvider)
+                            isRefreshingModels = false
+                        }
+                    }
                 }
             }
 
@@ -381,6 +391,12 @@ public struct SettingsSheet: View {
                         Button("Speichern") {
                             settings.setApiKey(currentApiKeyInput, for: currentProvider)
                             aiTestResult = (true, "\(currentProvider.shortName) API-Key sicher im macOS-Schlüsselbund gespeichert.")
+                            Task {
+                                isRefreshingModels = true
+                                let res = await settings.refreshModels(for: currentProvider)
+                                isRefreshingModels = false
+                                refreshStatusMessage = res.message
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.purple)
@@ -392,6 +408,7 @@ public struct SettingsSheet: View {
                                 settings.deleteApiKey(for: currentProvider)
                                 currentApiKeyInput = ""
                                 aiTestResult = nil
+                                refreshStatusMessage = nil
                             }
                             .buttonStyle(.bordered)
                             .font(.system(size: 11))
@@ -453,9 +470,38 @@ public struct SettingsSheet: View {
 
             // Section 2: Model Selection
             VStack(alignment: .leading, spacing: 10) {
-                Text("Modell für \(currentProvider.displayName)")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
+                HStack {
+                    Text("Modell für \(currentProvider.displayName)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Button(action: {
+                        Task {
+                            isRefreshingModels = true
+                            refreshStatusMessage = nil
+                            let res = await settings.refreshModels(for: currentProvider)
+                            isRefreshingModels = false
+                            refreshStatusMessage = res.message
+                        }
+                    }) {
+                        if isRefreshingModels {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                                .frame(width: 14, height: 14)
+                        } else {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Modelle abrufen")
+                            }
+                            .font(.system(size: 11))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isRefreshingModels || !hasKey)
+                    .help("Verfügbare Modelle live von \(currentProvider.displayName) über deinen API-Key abfragen")
+                }
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -463,7 +509,7 @@ public struct SettingsSheet: View {
                             get: { settings.getModel(for: currentProvider) },
                             set: { settings.setModel($0, for: currentProvider) }
                         )) {
-                            ForEach(AIModelOption.models(for: currentProvider)) { opt in
+                            ForEach(settings.models(for: currentProvider)) { opt in
                                 Text("\(opt.displayName)\(opt.isRecommended ? " (Empfohlen)" : "")").tag(opt.id)
                             }
                         }
@@ -476,10 +522,19 @@ public struct SettingsSheet: View {
                         Spacer()
                     }
 
-                    if let selected = AIModelOption.models(for: currentProvider).first(where: { $0.id == settings.getModel(for: currentProvider) }) {
+                    if let selected = settings.models(for: currentProvider).first(where: { $0.id == settings.getModel(for: currentProvider) }) {
                         Text(selected.description)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
+                    }
+
+                    if let msg = refreshStatusMessage {
+                        HStack(spacing: 4) {
+                            Image(systemName: "info.circle")
+                            Text(msg)
+                        }
+                        .font(.system(size: 10))
+                        .foregroundColor(.cyan)
                     }
                 }
                 .padding(10)
@@ -1071,6 +1126,12 @@ public struct SettingsSheet: View {
                 self.isTestingAI = false
                 if res.success {
                     settings.setApiKey(keyToTest, for: provider)
+                    Task {
+                        isRefreshingModels = true
+                        let modelRes = await settings.refreshModels(for: provider)
+                        isRefreshingModels = false
+                        refreshStatusMessage = modelRes.message
+                    }
                 }
             }
         }

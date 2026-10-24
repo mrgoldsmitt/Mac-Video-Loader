@@ -439,3 +439,9 @@ public class DownloadItem: Identifiable, ObservableObject, @unchecked Sendable {
         return item
     }
 }
+
+extension DownloadItem: Equatable {
+    public static func == (lhs: DownloadItem, rhs: DownloadItem) -> Bool {
+        lhs.id == rhs.id
+    }
+}

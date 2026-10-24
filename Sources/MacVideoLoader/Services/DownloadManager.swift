@@ -547,11 +547,17 @@ public class DownloadManager: ObservableObject {
         guard !items.isEmpty else { return }
         self.renameStudioFolder = nil
         self.renameStudioItems = items
+        DispatchQueue.main.async {
+            RenameStudioWindowManager.shared.show(downloadManager: self, items: items, standaloneFolder: nil)
+        }
     }
 
     public func openRenameStudioForFolder(_ folderURL: URL) {
         self.renameStudioItems = nil
         self.renameStudioFolder = folderURL
+        DispatchQueue.main.async {
+            RenameStudioWindowManager.shared.show(downloadManager: self, items: nil, standaloneFolder: folderURL)
+        }
     }
 
     // Backward compatibility aliases

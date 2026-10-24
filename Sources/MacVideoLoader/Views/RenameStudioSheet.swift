@@ -33,21 +33,31 @@ public struct RenameStudioSheet: View {
     @State private var searchQuery: String = ""
     @State private var useCustomAI: Bool = false
     @State private var isDropTargeted: Bool = false
+    @State private var isRefreshingModels: Bool = false
 
     private let sourceItems: [DownloadItem]?
+    private let onDismiss: (() -> Void)?
     private let service = RenameService.shared
 
     public init(
         downloadManager: DownloadManager,
         items: [DownloadItem]? = nil,
-        standaloneFolder: URL? = nil
+        standaloneFolder: URL? = nil,
+        onDismiss: (() -> Void)? = nil
     ) {
         self.downloadManager = downloadManager
         self.sourceItems = items
+        self.onDismiss = onDismiss
         let initialFolder = standaloneFolder
             ?? items?.first?.destinationFolder
             ?? AppSettings.shared.downloadFolder
         _currentFolder = State(initialValue: initialFolder)
+    }
+
+    private func dismissView() {
+        downloadManager.renameStudioItems = nil
+        downloadManager.renameStudioFolder = nil
+        onDismiss?()
     }
 
     private var isAIActive: Bool {
@@ -110,6 +120,11 @@ public struct RenameStudioSheet: View {
         .preferredColorScheme(.dark)
         .onAppear {
             initializeItems()
+            if settings.hasApiKey(for: settings.selectedAIProvider) && settings.dynamicModels[settings.selectedAIProvider.rawValue] == nil {
+                Task {
+                    _ = await settings.refreshModels(for: settings.selectedAIProvider)
+                }
+            }
         }
         .onDrop(of: ["public.file-url"], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers: providers)
@@ -119,6 +134,10 @@ public struct RenameStudioSheet: View {
     // MARK: - Header Bar
     private var headerBar: some View {
         HStack(spacing: 12) {
+            // Space for macOS native traffic light window buttons
+            Spacer()
+                .frame(width: 58)
+
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
@@ -197,10 +216,7 @@ public struct RenameStudioSheet: View {
             .buttonStyle(.plain)
             .help("Anderen Ordner auswählen & rekursiv einlesen (inkl. aller Unterordner)")
 
-            Button(action: {
-                downloadManager.renameStudioItems = nil
-                downloadManager.renameStudioFolder = nil
-            }) {
+            Button(action: dismissView) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))
                     .foregroundColor(.secondary)
@@ -209,7 +225,12 @@ public struct RenameStudioSheet: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(red: 0.13, green: 0.13, blue: 0.15))
+        .background(
+            ZStack {
+                Color(red: 0.13, green: 0.13, blue: 0.15)
+                WindowDragHandle()
+            }
+        )
     }
 
     // MARK: - Configuration Strip
@@ -371,26 +392,53 @@ public struct RenameStudioSheet: View {
                             .onChange(of: settings.selectedAIProvider) { p in
                                 if !settings.hasApiKey(for: p) {
                                     showApiKeySection = true
+                                } else {
+                                    Task {
+                                        _ = await settings.refreshModels(for: p)
+                                    }
                                 }
                             }
                         }
 
-                        // AI Model Picker
+                        // AI Model Picker with Live Refresh
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Modell")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.purple)
 
-                            Picker("", selection: Binding(
-                                get: { settings.getModel(for: settings.selectedAIProvider) },
-                                set: { settings.setModel($0, for: settings.selectedAIProvider) }
-                            )) {
-                                ForEach(AIModelOption.models(for: settings.selectedAIProvider)) { opt in
-                                    Text(opt.displayName).tag(opt.id)
+                            HStack(spacing: 4) {
+                                Picker("", selection: Binding(
+                                    get: { settings.getModel(for: settings.selectedAIProvider) },
+                                    set: { settings.setModel($0, for: settings.selectedAIProvider) }
+                                )) {
+                                    ForEach(settings.models(for: settings.selectedAIProvider)) { opt in
+                                        Text(opt.displayName).tag(opt.id)
+                                    }
                                 }
+                                .pickerStyle(.menu)
+                                .frame(width: 175)
+
+                                Button(action: {
+                                    Task {
+                                        isRefreshingModels = true
+                                        _ = await settings.refreshModels(for: settings.selectedAIProvider)
+                                        isRefreshingModels = false
+                                    }
+                                }) {
+                                    if isRefreshingModels {
+                                        ProgressView()
+                                            .scaleEffect(0.5)
+                                            .frame(width: 12, height: 12)
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(isRefreshingModels || !settings.hasApiKey(for: settings.selectedAIProvider))
+                                .help("Verfügbare Modelle live von \(settings.selectedAIProvider.displayName) über deinen API-Key abrufen")
                             }
-                            .pickerStyle(.menu)
-                            .frame(width: 155)
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 3) {
@@ -986,8 +1034,7 @@ public struct RenameStudioSheet: View {
             .foregroundColor(.blue)
 
             Button("Abbrechen") {
-                downloadManager.renameStudioItems = nil
-                downloadManager.renameStudioFolder = nil
+                dismissView()
             }
             .buttonStyle(.plain)
             .font(.system(size: 12))
@@ -1132,8 +1179,7 @@ public struct RenameStudioSheet: View {
 
     private func executeRename() {
         if renameCompletedCount != nil {
-            downloadManager.renameStudioItems = nil
-            downloadManager.renameStudioFolder = nil
+            dismissView()
             return
         }
 
